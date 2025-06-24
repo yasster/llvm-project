@@ -358,9 +358,6 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
         if(State < static_cast<int>(EHInfo.SEHUnwindMap.size()) &&
            EHInfo.SEHUnwindMap[State].IsFinally) {
 
-          
-          LLVM_DEBUG(dbgs() << "Warning: Found potentially throwing CallInst in finally context: "
-                           << Fn->getName() << " at state " << State << "\n");
           // Ensure proper state transition for finally blocks
           State = EHInfo.SEHUnwindMap[State].ToState;
       }
@@ -1264,20 +1261,19 @@ static bool shouldConvertCallToInvokeForSEH(CallInst *CI) {
   
   if (!F->hasPersonalityFn())
     return false;
-    
+  
+  // This also checks for NoUnwind attribute
+  if (CI->doesNotThrow())
+    return false;
+  
   Constant *PersonalityConst = F->getPersonalityFn();
   Function *PersonalityFn = dyn_cast<Function>(PersonalityConst->stripPointerCasts());
   if (!PersonalityFn)
     return false;
     
-  StringRef PersonalityName = PersonalityFn->getName();
-  if (PersonalityName != "__C_specific_handler" &&     // MSVC_TableSEH (64-bit)
-      PersonalityName != "_except_handler3" &&         // MSVC_X86SEH
-      PersonalityName != "_except_handler4")           // MSVC_X86SEH
-    return false;
-  
-  // This also checks for NoUnwind attribute
-  if (CI->doesNotThrow())
+  EHPersonality Personality = classifyEHPersonality(F->getPersonalityFn());
+  if (Personality != EHPersonality::MSVC_X86SEH && 
+      Personality != EHPersonality::MSVC_TableSEH)
     return false;
   
   if (Function *Callee = CI->getCalledFunction()) {
@@ -1288,25 +1284,31 @@ static bool shouldConvertCallToInvokeForSEH(CallInst *CI) {
       return false;
   }
   
-  // Check if function has SEH finally blocks
-  for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
-      if (auto *Call = dyn_cast<CallInst>(&I)) {
-        if (Function *Callee = Call->getCalledFunction()) {
-          StringRef Name = Callee->getName();
-          if (Name == "llvm.seh.try.begin" || 
-              Name == "llvm.seh.try.end" ||
-              Name.contains("cleanup") ||
-              Name.contains("finally")) {
-            return true;
-          }
-        }
-      }
-      if (auto *LPad = dyn_cast<LandingPadInst>(&I)) {
-        if (LPad->isCleanup()) {
-          return true;
-        }
-      }
+  // Check if function has SEH finally blocks by examining the unwind map
+  WinEHFuncInfo FuncInfo;
+  calculateSEHStateNumbers(F, FuncInfo);
+  
+  // First check if there are any finally blocks at all
+  bool HasFinallyBlocks = false;
+  for (const auto &Entry : FuncInfo.SEHUnwindMap) {
+    if (Entry.IsFinally) {
+      HasFinallyBlocks = true;
+      break;
+    }
+  }
+  
+  if (!HasFinallyBlocks)
+    return false;
+  
+  // Check if this specific call is in a finally context
+  BasicBlock *BB = CI->getParent();
+  auto BBIt = FuncInfo.BlockToStateMap.find(BB);
+  if (BBIt != FuncInfo.BlockToStateMap.end()) {
+    int State = BBIt->second;
+    if (State >= 0 && 
+        State < static_cast<int>(FuncInfo.SEHUnwindMap.size()) &&
+        FuncInfo.SEHUnwindMap[State].IsFinally) {
+      return true;
     }
   }
   
@@ -1345,47 +1347,36 @@ bool WinEHPrepareImpl::convertCallsToInvokesForSEH(Function &F) {
     UnwindBuilder.CreateResume(LPad);
     
     // Create continue block
-    BasicBlock *ContBB = BasicBlock::Create(F.getContext(), 
-                                          "seh.call.cont", &F);
+    BasicBlock *ContBB = OrigBB->splitBasicBlock(std::next(CI->getIterator()), "seh.call.cont");
     
-    // Split the original block after the call instruction
-    BasicBlock::iterator SplitPoint = std::next(CI->getIterator());
-    if (SplitPoint != OrigBB->end()) {
-      // Move instructions after the call to the continue block
-      while (SplitPoint != OrigBB->end()) {
-        Instruction &InstToMove = *SplitPoint;
-        ++SplitPoint; // Advance before moving
-        InstToMove.moveBefore(*ContBB, ContBB->end());
-      }
-    }
+    // Remove the unconditional branch that splitBasicBlock created
+    OrigBB->getTerminator()->eraseFromParent();
     
-    // Create the invoke instruction
-    IRBuilder<> CallBuilder(CI);
+    // Preserve operand bundles and Args
+    SmallVector<OperandBundleDef, 1> OpBundles;
     SmallVector<Value *, 8> Args(CI->args());
 
-    // Get the FunctionCallee from the call instruction
-    FunctionCallee Callee;
-    if (Function *F = CI->getCalledFunction()) {
-      // Direct call - create FunctionCallee from the function
-      Callee = FunctionCallee(F->getFunctionType(), F);
-    } else {
-      // Indirect call - create FunctionCallee from the called operand
-      Callee = FunctionCallee(CI->getFunctionType(), CI->getCalledOperand());
-    }
-
-    InvokeInst *Invoke = CallBuilder.CreateInvoke(Callee, ContBB, UnwindBB, Args);
+    CI->getOperandBundlesAsDefs(OpBundles);
     
+    // Create the invoke instruction
+    IRBuilder<> Builder(OrigBB);
+    InvokeInst *Invoke = Builder.CreateInvoke(
+        CI->getFunctionType(), CI->getCalledOperand(), ContBB, UnwindBB,
+        Args, OpBundles);
+
     // Copy attributes and metadata
     Invoke->setCallingConv(CI->getCallingConv());
     Invoke->setAttributes(CI->getAttributes());
+    Invoke->setDebugLoc(CI->getDebugLoc());
+
     CI->replaceAllUsesWith(Invoke);
     CI->eraseFromParent();
     
-    // Ensure original block branches to continue block if needed
-    if (OrigBB->getTerminator() == nullptr) {
-      CallBuilder.SetInsertPoint(OrigBB);
-      CallBuilder.CreateBr(ContBB);
-    }
+    // Take the name and replace uses
+    Invoke->takeName(CI);
+    CI->replaceAllUsesWith(Invoke);
+    CI->eraseFromParent();
+    
     Changed = true;
   }
   return Changed;
