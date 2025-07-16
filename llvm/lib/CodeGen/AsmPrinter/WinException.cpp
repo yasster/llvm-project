@@ -130,11 +130,15 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (F.hasPersonalityFn())
     Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
-  endFuncletImpl();
-
   // endFunclet will emit the necessary .xdata tables for table-based SEH.
-  if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets())
+  // Checking the personality before calling endFuncletImpl() to prevent
+  // duplicate SEH emission.
+  if (Per == EHPersonality::MSVC_TableSEH && MF->hasEHFunclets()) {
+    endFuncletImpl();
     return;
+  }
+
+  endFuncletImpl();
 
   if (shouldEmitPersonality || shouldEmitLSDA) {
     Asm->OutStreamer->pushSection();
