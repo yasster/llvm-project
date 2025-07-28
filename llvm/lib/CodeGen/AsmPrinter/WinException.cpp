@@ -589,32 +589,34 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
 
   OS.emitLabel(TableBegin);
 
-  // Iterate over all the invoke try ranges. Unlike MSVC, LLVM currently only
-  // models exceptions from invokes. LLVM also allows arbitrary reordering of
-  // the code, so our tables end up looking a bit different. Rather than
-  // trying to match MSVC's tables exactly, we emit a denormalized table.  For
-  // each range of invokes in the same state, we emit table entries for all
-  // the actions that would be taken in that state. This means our tables are
-  // slightly bigger, which is OK.
+  // Walk each contiguous invoke range (up to the first cleanup funclet).
+  // For each EH state, emit a single block of SEH entries.  We chain each new
+  // range off the end of the last one (using LastStartLabel) to prevent
+  // duplicate entries and ensure each __finally funclet appears exactly once.
   const MCSymbol *LastStartLabel = nullptr;
   int LastEHState = -1;
   // Break out before we enter into a finally funclet.
-  // FIXME: We need to emit separate EH tables for cleanups.
+  // FIXME: In future, emit independent tables per nested cleanup funclet.
   MachineFunction::const_iterator End = MF->end();
   MachineFunction::const_iterator Stop = std::next(MF->begin());
   while (Stop != End && !Stop->isEHFuncletEntry())
     ++Stop;
   for (const auto &StateChange :
-       InvokeStateChangeIterator::range(FuncInfo, MF->begin(), Stop)) {
-    // Emit all the actions for the state we just transitioned out of
-    // if it was not the null state
-    if (LastEHState != -1)
-      emitSEHActionsForRange(FuncInfo, LastStartLabel,
-                             StateChange.PreviousEndLabel, LastEHState);
-    LastStartLabel = StateChange.NewStartLabel;
-    LastEHState = StateChange.NewState;
+     InvokeStateChangeIterator::range(FuncInfo, MF->begin(), Stop)) {
+  if (LastEHState != -1) {
+    // Compute the start of this range: either the end of the previous block
+    // (LastStartLabel) or TableBegin for the very first block.
+    const MCSymbol *RangeStart =
+        LastStartLabel ? LastStartLabel : TableBegin;
+    emitSEHActionsForRange(FuncInfo,
+                           RangeStart,
+                           StateChange.PreviousEndLabel,
+                           LastEHState);
   }
-
+  LastStartLabel = StateChange.NewStartLabel;
+  LastEHState    = StateChange.NewState;
+  }
+  
   OS.emitLabel(TableEnd);
 }
 
@@ -629,36 +631,47 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
       OS.AddComment(Comment);
   };
 
+  // We must have valid range labels.
   assert(BeginLabel && EndLabel);
-  while (State != -1) {
-    const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
-    const MCExpr *FilterOrFinally;
-    const MCExpr *ExceptOrNull;
-    auto *Handler = cast<MachineBasicBlock *>(UME.Handler);
-    if (UME.IsFinally) {
-      FilterOrFinally = create32bitRef(getMCSymbolForMBB(Asm, Handler));
-      ExceptOrNull = MCConstantExpr::create(0, Ctx);
-    } else {
-      // For an except, the filter can be 1 (catch-all) or a function
-      // label.
-      FilterOrFinally = UME.Filter ? create32bitRef(UME.Filter)
-                                   : MCConstantExpr::create(1, Ctx);
-      ExceptOrNull = create32bitRef(Handler->getSymbol());
-    }
+  // unwind through the SEH map from the current state down to NullState
+   int CurrState = State;
+   const MCSymbol *CurrBegin = BeginLabel;
+   while (CurrState != NullState) {
+     const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[CurrState];
+     auto *Handler = cast<MachineBasicBlock *>(UME.Handler);
 
-    AddComment("LabelStart");
-    OS.emitValue(getLabel(BeginLabel), 4);
-    AddComment("LabelEnd");
-    OS.emitValue(getLabel(EndLabel), 4);
-    AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
-                                                             : "CatchAll");
-    OS.emitValue(FilterOrFinally, 4);
-    AddComment(UME.IsFinally ? "Null" : "ExceptionHandler");
-    OS.emitValue(ExceptOrNull, 4);
+     // Select filter vs. finally for this state.
+     const MCExpr *FilterOrFinally;
+     const MCExpr *ExceptOrNull;
+     if (UME.IsFinally) {
+       // __finally blocks: handler is a funclet, exception label is zero.
+       FilterOrFinally = create32bitRef(getMCSymbolForMBB(Asm, Handler));
+       ExceptOrNull    = MCConstantExpr::create(0, Ctx);
+     } else {
+       // __except blocks: filter can be catch-all (1) or a function label.
+       FilterOrFinally = UME.Filter
+                         ? create32bitRef(UME.Filter)
+                         : MCConstantExpr::create(1, Ctx);
+       ExceptOrNull    = create32bitRef(Handler->getSymbol());
+     }
 
-    assert(UME.ToState < State && "states should decrease");
-    State = UME.ToState;
-  }
+     AddComment("LabelStart");
+     OS.emitValue(getLabel(CurrBegin), 4);
+     AddComment("LabelEnd");
+     OS.emitValue(getLabel(EndLabel), 4);
+     AddComment(UME.IsFinally ? "FinallyFunclet"
+                               : (UME.Filter ? "FilterFunction" : "CatchAll"));
+     OS.emitValue(FilterOrFinally, 4);
+     AddComment(UME.IsFinally ? "Null" : "ExceptionHandler");
+     OS.emitValue(ExceptOrNull, 4);
+
+     // The unwind map must progress toward the null state.
+     assert(UME.ToState < CurrState && "SEH state must decrease");
+     // next range begins where this one ends
+     CurrBegin = EndLabel;
+     // advance to the next state
+     CurrState = UME.ToState;
+   }
 }
 
 void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {

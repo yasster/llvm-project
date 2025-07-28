@@ -86,7 +86,7 @@ __try.cont:
 ; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long safe_div_filt0@IMGREL
 ; CHECK-NEXT: .long [[handler0]]@IMGREL
-; CHECK-NEXT: .long .Ltmp0@IMGREL
+; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long safe_div_filt1@IMGREL
 ; CHECK-NEXT: .long [[handler1]]@IMGREL

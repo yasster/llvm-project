@@ -69,7 +69,7 @@ catch.body.2:
 ; SEH-NEXT:    .[[ENTRY]]   .Ltmp1@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH]]@IMGREL
-; SEH-NEXT:    .[[ENTRY]]   .Ltmp0@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp1@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   .Ltmp1@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH2]]@IMGREL
@@ -77,7 +77,7 @@ catch.body.2:
 ; SEH-NEXT:    .[[ENTRY]]   .Ltmp3@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   "?dtor$[[DTOR:[0-9]+]]@?0?test@4HA"@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   0
-; SEH-NEXT:    .[[ENTRY]]   .Ltmp2@IMGREL
+; SEH-NEXT:    .[[ENTRY]]   .Ltmp3@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   .Ltmp3@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   dummy_filter@IMGREL
 ; SEH-NEXT:    .[[ENTRY]]   .LBB0_[[CATCH2]]@IMGREL

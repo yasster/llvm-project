@@ -86,7 +86,7 @@ __try.cont:                                       ; preds = %__except, %invoke.c
 ; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long "?dtor$2@?0?use_both@4HA"@IMGREL
 ; CHECK-NEXT: .long 0
-; CHECK-NEXT: .long .Ltmp0@IMGREL
+; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long .Ltmp1@IMGREL
 ; CHECK-NEXT: .long "?filt$0@0@use_both@@"@IMGREL
 ; CHECK-NEXT: .long .LBB0_{{[0-9]+}}@IMGREL
