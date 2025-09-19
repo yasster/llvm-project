@@ -28,6 +28,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
@@ -82,7 +83,7 @@ enum class StringLiteralKind;
 
 /// Stmt - This represents one statement.
 ///
-class alignas(void *) Stmt {
+class CLANG_ABI alignas(void *) Stmt {
 public:
   enum StmtClass {
     NoStmtClass = 0,

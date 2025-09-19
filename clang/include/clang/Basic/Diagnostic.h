@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/UnsignedOrNone.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
@@ -228,7 +229,7 @@ public:
 /// as errors" and passes them off to the DiagnosticConsumer for reporting to
 /// the user. DiagnosticsEngine is tied to one translation unit and one
 /// SourceManager.
-class DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
+class CLANG_ABI DiagnosticsEngine : public RefCountedBase<DiagnosticsEngine> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
   // FIXME: Make this an alias for DiagnosticIDs::Level as soon as
@@ -1545,7 +1546,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 /// A little helper class (which is basically a smart pointer that forwards
 /// info from DiagnosticsEngine and DiagnosticStorage) that allows clients to
 /// enquire about the diagnostic.
-class Diagnostic {
+class CLANG_ABI Diagnostic {
   const DiagnosticsEngine *DiagObj;
   SourceLocation DiagLoc;
   unsigned DiagID;
@@ -1719,7 +1720,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
 /// formats and prints fully processed diagnostics.
-class DiagnosticConsumer {
+class CLANG_ABI DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0; ///< Number of warnings reported
   unsigned NumErrors = 0;   ///< Number of errors reported

@@ -14,22 +14,17 @@ if(NOT MSVC)
     )
 endif()
 
-if (LLVM_BUILD_STATIC)
+if (CLANG_LINK_CLANG_DYLIB)
+  target_link_libraries(c-index-test
+    PRIVATE
+    libclang
+  )
+else()
   target_link_libraries(c-index-test
     PRIVATE
     libclang_static
     clangCodeGen
     clangIndex
-  )
-else()
-  target_link_libraries(c-index-test
-    PRIVATE
-    libclang
-    clangAST
-    clangBasic
-    clangFrontend
-    clangIndex
-    clangSerialization
   )
 endif()
 

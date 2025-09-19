@@ -418,7 +418,7 @@ public:
   /// This is not the linkage as defined by the standard or the codegen notion
   /// of linkage. It is just an implementation detail that is used to compute
   /// those.
-  Linkage getLinkageInternal() const;
+  CLANG_ABI Linkage getLinkageInternal() const;
 
   /// Get the linkage from a semantic point of view. Entities in
   /// anonymous namespaces are external (in c++98).
@@ -445,7 +445,7 @@ public:
   }
 
   /// Determines the linkage and visibility of this entity.
-  LinkageInfo getLinkageAndVisibility() const;
+  CLANG_ABI LinkageInfo getLinkageAndVisibility() const;
 
   /// Kinds of explicit visibility.
   enum ExplicitVisibilityKind {
@@ -479,7 +479,7 @@ public:
     return hasCachedLinkage();
   }
 
-  bool isPlaceholderVar(const LangOptions &LangOpts) const;
+  CLANG_ABI bool isPlaceholderVar(const LangOptions &LangOpts) const;
 
   /// Looks through UsingDecls and ObjCCompatibleAliasDecls for
   /// the underlying named decl.
@@ -724,12 +724,12 @@ public:
 
   /// Determine whether this symbol is weakly-imported,
   ///        or declared with the weak or weak-ref attr.
-  bool isWeak() const;
+  CLANG_ABI bool isWeak() const;
 
   /// Whether this variable is the implicit variable for a lambda init-capture.
   /// Only VarDecl can be init captures, but both VarDecl and BindingDecl
   /// can be captured.
-  bool isInitCapture() const;
+  CLANG_ABI bool isInitCapture() const;
 
   // If this is a VarDecl, or a BindindDecl with an
   // associated decomposed VarDecl, return that VarDecl.
@@ -1234,7 +1234,7 @@ public:
   LanguageLinkage getLanguageLinkage() const;
 
   /// Determines whether this variable is a variable with external, C linkage.
-  bool isExternC() const;
+  CLANG_ABI bool isExternC() const;
 
   /// Determines whether this variable's context is, or is nested within,
   /// a C++ extern "C" linkage spec.
@@ -1303,7 +1303,7 @@ public:
   /// Check whether this declaration is a definition. If this could be
   /// a tentative definition (in C), don't check whether there's an overriding
   /// definition.
-  DefinitionKind isThisDeclarationADefinition(ASTContext &) const;
+  CLANG_ABI DefinitionKind isThisDeclarationADefinition(ASTContext &) const;
   DefinitionKind isThisDeclarationADefinition() const {
     return isThisDeclarationADefinition(getASTContext());
   }
@@ -1322,7 +1322,7 @@ public:
   }
 
   /// Get the real (not just tentative) definition for this declaration.
-  VarDecl *getDefinition(ASTContext &);
+  CLANG_ABI VarDecl *getDefinition(ASTContext &);
   const VarDecl *getDefinition(ASTContext &C) const {
     return const_cast<VarDecl*>(this)->getDefinition(C);
   }
@@ -1597,7 +1597,7 @@ public:
   /// Indicates the capture is a __block variable that is captured by a block
   /// that can potentially escape (a block for which BlockDecl::doesNotEscape
   /// returns false).
-  bool isEscapingByref() const;
+  CLANG_ABI bool isEscapingByref() const;
 
   /// Indicates the capture is a __block variable that is never captured by an
   /// escaping block.
@@ -1683,7 +1683,7 @@ public:
   /// VarDecl that from a VarTemplateDecl, while
   /// getDescribedVarTemplate() retrieves the VarTemplateDecl from
   /// a VarDecl.
-  VarTemplateDecl *getDescribedVarTemplate() const;
+  CLANG_ABI VarTemplateDecl *getDescribedVarTemplate() const;
 
   void setDescribedVarTemplate(VarTemplateDecl *Template);
 
@@ -1895,7 +1895,7 @@ public:
 
   /// Retrieve the source range that covers the entire default
   /// argument.
-  SourceRange getDefaultArgRange() const;
+  CLANG_ABI SourceRange getDefaultArgRange() const;
   void setUninstantiatedDefaultArg(Expr *arg);
   Expr *getUninstantiatedDefaultArg();
   const Expr *getUninstantiatedDefaultArg() const {
@@ -1939,7 +1939,7 @@ public:
     ParmVarDeclBits.HasInheritedDefaultArg = I;
   }
 
-  QualType getOriginalType() const;
+  CLANG_ABI QualType getOriginalType() const;
 
   /// Sets the function declaration that owns this
   /// ParmVarDecl. Since ParmVarDecls are often created before the
@@ -1972,7 +1972,7 @@ private:
   }
 
   void setParameterIndexLarge(unsigned parameterIndex);
-  unsigned getParameterIndexLarge() const;
+  CLANG_ABI unsigned getParameterIndexLarge() const;
 };
 
 enum class MultiVersionKind {
@@ -2256,7 +2256,7 @@ public:
 
   /// Returns whether the function has a trivial body that does not require any
   /// specific codegen.
-  bool hasTrivialBody() const;
+  CLANG_ABI bool hasTrivialBody() const;
 
   /// Returns true if the function has a definition that does not need to be
   /// instantiated.
@@ -2269,10 +2269,8 @@ public:
   ///        Such a declaration behaves as if it is a definition for the
   ///        purpose of redefinition checking, but isn't actually a "real"
   ///        definition until its body is instantiated.
-  bool isDefined(const FunctionDecl *&Definition,
-                 bool CheckForPendingFriendDefinition = false) const;
-
-  bool isDefined() const {
+  CLANG_ABI bool isDefined(const FunctionDecl *&Definition,
+                    bool CheckForPendingFriendDefinition = false) const;  bool isDefined() const {
     const FunctionDecl* Definition;
     return isDefined(Definition);
   }
@@ -2337,7 +2335,7 @@ public:
   DefaultedOrDeletedFunctionInfo *getDefalutedOrDeletedInfo() const;
 
   /// Whether this function is variadic.
-  bool isVariadic() const;
+  CLANG_ABI bool isVariadic() const;
 
   /// Whether this function is marked as virtual explicitly.
   bool isVirtualAsWritten() const {
@@ -2651,7 +2649,7 @@ public:
 
   /// Determines whether this function is a function with
   /// external, C linkage.
-  bool isExternC() const;
+  CLANG_ABI bool isExternC() const;
 
   /// Determines whether this function's context is, or is nested within,
   /// a C++ extern "C" linkage spec.
@@ -2662,11 +2660,11 @@ public:
   bool isInExternCXXContext() const;
 
   /// Determines whether this is a global function.
-  bool isGlobal() const;
+  CLANG_ABI bool isGlobal() const;
 
   /// Determines whether this function is known to be 'noreturn', through
   /// an attribute on its declaration or its type.
-  bool isNoReturn() const;
+  CLANG_ABI bool isNoReturn() const;
 
   /// Determines whether this function is known to be 'noreturn' for analyzer,
   /// through an `analyzer_noreturn` attribute on its declaration.
@@ -2760,12 +2758,12 @@ public:
 
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 
-  FunctionDecl *getCanonicalDecl() override;
+  CLANG_ABI FunctionDecl *getCanonicalDecl() override;
   const FunctionDecl *getCanonicalDecl() const {
     return const_cast<FunctionDecl*>(this)->getCanonicalDecl();
   }
 
-  unsigned getBuiltinID(bool ConsiderWrapperFunctions = false) const;
+  CLANG_ABI unsigned getBuiltinID(bool ConsiderWrapperFunctions = false) const;
 
   // ArrayRef interface to parameters.
   ArrayRef<ParmVarDecl *> parameters() const {
@@ -2815,7 +2813,7 @@ public:
 
   bool hasCXXExplicitFunctionObjectParameter() const;
 
-  unsigned getNumNonObjectParams() const;
+  CLANG_ABI unsigned getNumNonObjectParams() const;
 
   const ParmVarDecl *getNonObjectParameter(unsigned I) const {
     return getParamDecl(hasCXXExplicitFunctionObjectParameter() ? I + 1 : I);
@@ -2846,13 +2844,13 @@ public:
   /// Attempt to compute an informative source range covering the
   /// function return type. This may omit qualifiers and other information with
   /// limited representation in the AST.
-  SourceRange getReturnTypeSourceRange() const;
+  CLANG_ABI SourceRange getReturnTypeSourceRange() const;
 
   /// Attempt to compute an informative source range covering the
   /// function parameters, including the ellipsis of a variadic function.
   /// The source range excludes the parentheses, and is invalid if there are
   /// no parameters and no ellipsis.
-  SourceRange getParametersSourceRange() const;
+  CLANG_ABI SourceRange getParametersSourceRange() const;
 
   /// Get the declared return type, which may differ from the actual return
   /// type if the return type is deduced.
@@ -2921,7 +2919,7 @@ public:
 
   bool isMSExternInline() const;
 
-  bool doesDeclarationForceExternallyVisibleDefinition() const;
+  CLANG_ABI bool doesDeclarationForceExternallyVisibleDefinition() const;
 
   bool isStatic() const { return getStorageClass() == SC_Static; }
 
@@ -2933,7 +2931,7 @@ public:
 
   OverloadedOperatorKind getOverloadedOperator() const;
 
-  const IdentifierInfo *getLiteralIdentifier() const;
+  CLANG_ABI const IdentifierInfo *getLiteralIdentifier() const;
 
   /// If this function is an instantiation of a member function
   /// of a class template specialization, retrieves the function from
@@ -2956,10 +2954,10 @@ public:
   /// the FunctionDecl X<T>::A. When a complete definition of
   /// X<int>::A is required, it will be instantiated from the
   /// declaration returned by getInstantiatedFromMemberFunction().
-  FunctionDecl *getInstantiatedFromMemberFunction() const;
+  CLANG_ABI FunctionDecl *getInstantiatedFromMemberFunction() const;
 
   /// What kind of templated function this is.
-  TemplatedKind getTemplatedKind() const;
+  CLANG_ABI TemplatedKind getTemplatedKind() const;
 
   /// If this function is an instantiation of a member function of a
   /// class template specialization, retrieves the member specialization
@@ -3030,7 +3028,7 @@ public:
   ///
   /// If this function declaration is not a function template specialization,
   /// returns NULL.
-  FunctionTemplateDecl *getPrimaryTemplate() const;
+  CLANG_ABI FunctionTemplateDecl *getPrimaryTemplate() const;
 
   /// Retrieve the template arguments used to produce this function
   /// template specialization from the primary template.
@@ -3266,7 +3264,7 @@ public:
   /// representative for an anonymous struct or union. Such fields are
   /// unnamed and are implicitly generated by the implementation to
   /// store the data for the anonymous union or struct.
-  bool isAnonymousStructOrUnion() const;
+  CLANG_ABI bool isAnonymousStructOrUnion() const;
 
   /// Returns the expression that represents the bit width, if this field
   /// is a bit field. For non-bitfields, this returns \c nullptr.
@@ -3279,7 +3277,7 @@ public:
   /// Determines whether the bit width of this field is a constant integer.
   /// This may not always be the case, such as inside template-dependent
   /// expressions.
-  bool hasConstantIntegerBitWidth() const;
+  CLANG_ABI bool hasConstantIntegerBitWidth() const;
 
   /// Computes the bit width of this field, if this is a bit field.
   /// May not be called on non-bitfields.
@@ -4472,7 +4470,7 @@ public:
 
   /// Determine whether this record is a class describing a lambda
   /// function object.
-  bool isLambda() const;
+  CLANG_ABI bool isLambda() const;
 
   /// Determine whether this record is a record for captured variables in
   /// CapturedStmt construct.

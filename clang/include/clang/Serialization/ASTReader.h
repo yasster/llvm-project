@@ -34,6 +34,7 @@
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Serialization/SourceLocationEncoding.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -2644,7 +2645,7 @@ public:
           Visitor);
 
   /// Visit all the input files of the given module file.
-  void visitInputFiles(serialization::ModuleFile &MF,
+  CLANG_ABI void visitInputFiles(serialization::ModuleFile &MF,
                        bool IncludeSystem, bool Complain,
           llvm::function_ref<void(const serialization::InputFile &IF,
                                   bool isSystem)> Visitor);

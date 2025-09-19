@@ -10,6 +10,7 @@
 #define LLVM_CLANG_SERIALIZATION_PCHCONTAINEROPERATIONS_H
 
 #include "clang/Basic/Module.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -52,7 +53,7 @@ public:
 /// This abstract interface provides operations for unwrapping
 /// containers for serialized ASTs (precompiled headers and clang
 /// modules).
-class PCHContainerReader {
+class CLANG_ABI PCHContainerReader {
 public:
   virtual ~PCHContainerReader() = 0;
   /// Equivalent to the format passed to -fmodule-format=
@@ -84,7 +85,7 @@ class RawPCHContainerReader : public PCHContainerReader {
 };
 
 /// A registry of PCHContainerWriter and -Reader objects for different formats.
-class PCHContainerOperations {
+class CLANG_ABI PCHContainerOperations {
   llvm::StringMap<std::unique_ptr<PCHContainerWriter>> Writers;
   llvm::StringMap<PCHContainerReader *> Readers;
   llvm::SmallVector<std::unique_ptr<PCHContainerReader>> OwnedReaders;
@@ -93,6 +94,14 @@ public:
   /// Automatically registers a RawPCHContainerWriter and
   /// RawPCHContainerReader.
   PCHContainerOperations();
+  
+  // Disable copy operations since this class contains unique_ptr
+  PCHContainerOperations(const PCHContainerOperations&) = delete;
+  PCHContainerOperations& operator=(const PCHContainerOperations&) = delete;
+  
+  // Enable move operations  
+  PCHContainerOperations(PCHContainerOperations&&) = default;
+  PCHContainerOperations& operator=(PCHContainerOperations&&) = default;
   void registerWriter(std::unique_ptr<PCHContainerWriter> Writer) {
     Writers[Writer->getFormat()] = std::move(Writer);
   }

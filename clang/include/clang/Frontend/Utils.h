@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Frontend/DependencyOutputOptions.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
@@ -232,7 +233,7 @@ struct CreateInvocationOptions {
 ///
 /// May return nullptr if an invocation could not be determined.
 /// See CreateInvocationOptions::ShouldRecoverOnErrors to try harder!
-std::unique_ptr<CompilerInvocation>
+CLANG_ABI std::unique_ptr<CompilerInvocation>
 createInvocation(ArrayRef<const char *> Args,
                  CreateInvocationOptions Opts = {});
 

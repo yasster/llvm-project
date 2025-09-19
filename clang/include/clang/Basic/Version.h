@@ -16,6 +16,7 @@
 #define LLVM_CLANG_BASIC_VERSION_H
 
 #include "clang/Basic/Version.inc"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -53,7 +54,7 @@ namespace clang {
   std::string getClangFullVersion();
 
   /// Like getClangFullVersion(), but with a custom tool name.
-  std::string getClangToolFullVersion(llvm::StringRef ToolName);
+  CLANG_ABI std::string getClangToolFullVersion(llvm::StringRef ToolName);
 
   /// Retrieves a string representing the complete clang version suitable
   /// for use in the CPP __VERSION__ macro, which includes the clang version

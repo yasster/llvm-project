@@ -38,6 +38,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -128,7 +129,7 @@ private:
 /// One instance of this struct is kept for every file loaded or used.
 ///
 /// This object owns the MemoryBuffer object.
-class alignas(8) ContentCache {
+class alignas(8) CLANG_ABI ContentCache {
   /// The actual buffer containing the characters from the input
   /// file.
   mutable std::unique_ptr<llvm::MemoryBuffer> Buffer;
@@ -660,7 +661,7 @@ using ModuleBuildStack = ArrayRef<std::pair<std::string, FullSourceLoc>>;
 /// the case of a macro expansion, for example, the spelling location indicates
 /// where the expanded token came from and the expansion location specifies
 /// where it was expanded.
-class SourceManager : public RefCountedBase<SourceManager> {
+class CLANG_ABI SourceManager : public RefCountedBase<SourceManager> {
   /// DiagnosticsEngine object.
   DiagnosticsEngine &Diag;
 

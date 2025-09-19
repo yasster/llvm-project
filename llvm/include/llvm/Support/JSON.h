@@ -156,7 +156,6 @@ public:
 
   friend bool operator==(const Object &LHS, const Object &RHS);
 };
-LLVM_ABI bool operator==(const Object &LHS, const Object &RHS);
 inline bool operator!=(const Object &LHS, const Object &RHS) {
   return !(LHS == RHS);
 }

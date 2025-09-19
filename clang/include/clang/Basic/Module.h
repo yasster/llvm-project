@@ -18,6 +18,7 @@
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -709,7 +710,7 @@ public:
   /// its top-level module.
   /// \param AllowStringLiterals If \c true, components that might not be
   ///        lexically valid as identifiers will be emitted as string literals.
-  std::string getFullModuleName(bool AllowStringLiterals = false) const;
+  CLANG_ABI std::string getFullModuleName(bool AllowStringLiterals = false) const;
 
   /// Whether the full name of this module is equal to joining
   /// \p nameParts with "."s.

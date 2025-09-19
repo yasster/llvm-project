@@ -15,6 +15,7 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -5707,7 +5708,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language);
 FormatStyle getClangFormatStyle();
 
 /// Returns style indicating formatting should be not applied at all.
-FormatStyle getNoStyle();
+CLANG_ABI FormatStyle getNoStyle();
 
 /// Gets a predefined style for the specified language by name.
 ///
@@ -5748,11 +5749,11 @@ inline std::error_code parseConfiguration(StringRef Config, FormatStyle *Style,
 }
 
 /// Gets configuration in a YAML string.
-std::string configurationAsText(const FormatStyle &Style);
+CLANG_ABI std::string configurationAsText(const FormatStyle &Style);
 
 /// Returns the replacements necessary to sort all ``#include`` blocks
 /// that are affected by ``Ranges``.
-tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
+CLANG_ABI tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    ArrayRef<tooling::Range> Ranges,
                                    StringRef FileName,
                                    unsigned *Cursor = nullptr);
@@ -5804,7 +5805,7 @@ struct FormattingAttemptStatus {
 ///
 /// If ``Status`` is non-null, its value will be populated with the status of
 /// this formatting attempt. See \c FormattingAttemptStatus.
-tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
+CLANG_ABI tooling::Replacements reformat(const FormatStyle &Style, StringRef Code,
                                ArrayRef<tooling::Range> Ranges,
                                StringRef FileName = "<stdin>",
                                FormattingAttemptStatus *Status = nullptr);
@@ -5862,16 +5863,16 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
 /// Description to be used for help text for a ``llvm::cl`` option for
 /// specifying format style. The description is closely related to the operation
 /// of ``getStyle()``.
-extern const char *StyleOptionHelpDescription;
+extern CLANG_ABI const char *StyleOptionHelpDescription;
 
 /// The suggested format style to use by default. This allows tools using
 /// ``getStyle`` to have a consistent default style.
 /// Different builds can modify the value to the preferred styles.
-extern const char *DefaultFormatStyle;
+extern CLANG_ABI const char *DefaultFormatStyle;
 
 /// The suggested predefined style to use as the fallback style in ``getStyle``.
 /// Different builds can modify the value to the preferred styles.
-extern const char *DefaultFallbackStyle;
+extern CLANG_ABI const char *DefaultFallbackStyle;
 
 /// Construct a FormatStyle based on ``StyleName``.
 ///
@@ -5901,7 +5902,7 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-Expected<FormatStyle>
+CLANG_ABI Expected<FormatStyle>
 getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
          StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
          bool AllowUnknownOptions = false,

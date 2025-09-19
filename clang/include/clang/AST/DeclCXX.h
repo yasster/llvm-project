@@ -638,7 +638,7 @@ public:
 
   /// Determine whether this class has any dependent base classes which
   /// are not the current instantiation.
-  bool hasAnyDependentBases() const;
+  CLANG_ABI bool hasAnyDependentBases() const;
 
   /// Iterator access to method members.  The method iterator visits
   /// all method members of the class, including non-instance methods,
@@ -1528,7 +1528,7 @@ public:
 
   /// Retrieve the record declaration from which this record could be
   /// instantiated. Returns null if this class is not a template instantiation.
-  const CXXRecordDecl *getTemplateInstantiationPattern() const;
+  CLANG_ABI const CXXRecordDecl *getTemplateInstantiationPattern() const;
 
   CXXRecordDecl *getTemplateInstantiationPattern() {
     return const_cast<CXXRecordDecl *>(const_cast<const CXXRecordDecl *>(this)
@@ -1536,7 +1536,7 @@ public:
   }
 
   /// Returns the destructor decl for this class.
-  CXXDestructorDecl *getDestructor() const;
+  CLANG_ABI CXXDestructorDecl *getDestructor() const;
 
   /// Returns the destructor decl for this class.
   bool hasDeletedDestructor() const;
@@ -2534,7 +2534,7 @@ public:
   SourceLocation getSourceLocation() const;
 
   /// Determine the source range covering the entire initializer.
-  SourceRange getSourceRange() const LLVM_READONLY;
+  CLANG_ABI SourceRange getSourceRange() const LLVM_READONLY;
 
   /// Determine whether this initializer is explicitly written
   /// in the source code.

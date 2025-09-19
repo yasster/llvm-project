@@ -35,6 +35,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Support/Compiler.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -316,7 +317,7 @@ public:
 /// command line arguments before the arguments are used to run
 /// a frontend action. One could install an additional command line
 /// arguments adjuster by calling the appendArgumentsAdjuster() method.
-class ClangTool {
+class CLANG_ABI ClangTool {
 public:
   /// Constructs a clang tool to run over a list of files.
   ///

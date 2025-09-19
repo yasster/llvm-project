@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_BASIC_TARGETID_H
 #define LLVM_CLANG_BASIC_TARGETID_H
 
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
@@ -50,7 +51,7 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
 /// Get the conflicted pair of target IDs for a compilation or a bundled code
 /// object, assuming \p TargetIDs are canonicalized. If there is no conflicts,
 /// returns std::nullopt.
-std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
+CLANG_ABI std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
 getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs);
 
 /// Check whether the provided target ID is compatible with the requested

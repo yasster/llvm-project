@@ -45,6 +45,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
@@ -10177,4 +10178,15 @@ enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
   }
 
   return CXUnaryOperator_Invalid;
+}
+
+// Export ObjectFilePCHContainerReader symbols for c-index-test
+extern "C" {
+CINDEX_LINKAGE void* clang_createObjectFilePCHContainerReader() {
+  return new ObjectFilePCHContainerReader();
+}
+
+CINDEX_LINKAGE void clang_destroyObjectFilePCHContainerReader(void* reader) {
+  delete static_cast<ObjectFilePCHContainerReader*>(reader);
+}
 }

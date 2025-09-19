@@ -10,6 +10,7 @@
 #define LLVM_CLANG_INDEX_USRGENERATION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -30,8 +31,8 @@ static inline StringRef getUSRSpacePrefix() {
 
 /// Generate a USR for a Decl, including the USR prefix.
 /// \returns true if the results should be ignored, false otherwise.
-bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf);
-bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf,
+CLANG_ABI bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf);
+CLANG_ABI bool generateUSRForDecl(const Decl *D, SmallVectorImpl<char> &Buf,
                         const LangOptions &LangOpts);
 
 /// Generate a USR fragment for an Objective-C class.
@@ -70,9 +71,9 @@ void generateUSRForEnumConstant(StringRef EnumConstantName, raw_ostream &OS);
 /// Generate a USR for a macro, including the USR prefix.
 ///
 /// \returns true on error, false on success.
-bool generateUSRForMacro(const MacroDefinitionRecord *MD,
+CLANG_ABI bool generateUSRForMacro(const MacroDefinitionRecord *MD,
                          const SourceManager &SM, SmallVectorImpl<char> &Buf);
-bool generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
+CLANG_ABI bool generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
                          const SourceManager &SM, SmallVectorImpl<char> &Buf);
 
 /// Generates a USR for a type.
@@ -85,7 +86,7 @@ bool generateUSRForType(QualType T, ASTContext &Ctx, SmallVectorImpl<char> &Buf,
 
 /// Generate a USR for a module, including the USR prefix.
 /// \returns true on error, false on success.
-bool generateFullUSRForModule(const Module *Mod, raw_ostream &OS);
+CLANG_ABI bool generateFullUSRForModule(const Module *Mod, raw_ostream &OS);
 
 /// Generate a USR for a top-level module name, including the USR prefix.
 /// \returns true on error, false on success.

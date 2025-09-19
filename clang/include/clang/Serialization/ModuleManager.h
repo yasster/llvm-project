@@ -17,6 +17,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
@@ -280,7 +281,7 @@ public:
   /// that we know we need to visit because the global module index told us to.
   /// Any module that is known to both the global module index and the module
   /// manager that is *not* in this set can be skipped.
-  void visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
+  CLANG_ABI void visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
              llvm::SmallPtrSetImpl<ModuleFile *> *ModuleFilesHit = nullptr);
 
   /// Attempt to resolve the given module file name to a file entry.

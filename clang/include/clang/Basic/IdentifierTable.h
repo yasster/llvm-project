@@ -20,6 +20,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -113,7 +114,7 @@ enum class InterestingIdentifier {
 /// variable or function name).  The preprocessor keeps this information in a
 /// set, and all tok::identifier tokens have a pointer to one of these.
 /// It is aligned to 8 bytes because DeclarationName needs the lower 3 bits.
-class alignas(IdentifierInfoAlignment) IdentifierInfo {
+class CLANG_ABI alignas(IdentifierInfoAlignment) IdentifierInfo {
   friend class IdentifierTable;
 
   // Front-end token ID or tok::identifier.

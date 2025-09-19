@@ -20,6 +20,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -80,7 +81,7 @@ private:
 ///
 /// Represents a SourceManager independent replacement of a range of text in a
 /// specific file.
-class Replacement {
+class CLANG_ABI Replacement {
 public:
   /// Creates an invalid (not applicable) replacement.
   Replacement();
@@ -198,7 +199,7 @@ private:
 };
 
 /// Less-than operator between two Replacements.
-bool operator<(const Replacement &LHS, const Replacement &RHS);
+CLANG_ABI bool operator<(const Replacement &LHS, const Replacement &RHS);
 
 /// Equal-to operator between two Replacements.
 bool operator==(const Replacement &LHS, const Replacement &RHS);
@@ -209,7 +210,7 @@ inline bool operator!=(const Replacement &LHS, const Replacement &RHS) {
 /// Maintains a set of replacements that are conflict-free.
 /// Two replacements are considered conflicts if they overlap or have the same
 /// offset (i.e. order-dependent).
-class Replacements {
+class CLANG_ABI Replacements {
 private:
   using ReplacementsImpl = std::set<Replacement>;
 
@@ -319,7 +320,7 @@ private:
 /// other applications.
 ///
 /// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
+CLANG_ABI bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 
 /// Applies all replacements in \p Replaces to \p Code.
 ///
@@ -328,7 +329,7 @@ bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
 /// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
 /// is returned (the Error message can be converted to string using
 /// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
-llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+CLANG_ABI llvm::Expected<std::string> applyAllReplacements(StringRef Code,
                                                  const Replacements &Replaces);
 
 /// Collection of Replacements generated from a single translation unit.
@@ -347,7 +348,7 @@ struct TranslationUnitReplacements {
 ///
 /// \return The new ranges after \p Replaces are applied. The new ranges will be
 /// sorted and non-overlapping.
-std::vector<Range>
+CLANG_ABI std::vector<Range>
 calculateRangesAfterReplacements(const Replacements &Replaces,
                                  const std::vector<Range> &Ranges);
 

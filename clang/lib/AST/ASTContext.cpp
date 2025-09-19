@@ -15186,3 +15186,28 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
   ThunksToBeAbbreviated[VirtualMethodDecl] = std::move(SimplifiedThunkNames);
   return Result;
 }
+
+// operator new and delete aren't allowed inside namespaces.
+// These are placement operators that use ASTContext's allocator.
+
+/// Placement new for using the ASTContext's allocator.
+void *operator new(size_t Bytes, const clang::ASTContext &C,
+                   size_t Alignment) {
+  return C.Allocate(Bytes, Alignment);
+}
+
+/// Placement delete companion to the new above.
+void operator delete(void *Ptr, const clang::ASTContext &C, size_t) {
+  C.Deallocate(Ptr);
+}
+
+/// This placement form of operator new[] uses the ASTContext's allocator.
+void *operator new[](size_t Bytes, const clang::ASTContext& C,
+                     size_t Alignment) {
+  return C.Allocate(Bytes, Alignment);
+}
+
+/// Placement delete[] companion to the new[] above.
+void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
+  C.Deallocate(Ptr);
+}

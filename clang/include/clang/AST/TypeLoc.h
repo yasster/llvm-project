@@ -22,6 +22,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -56,7 +57,7 @@ class UnresolvedUsingTypenameDecl;
 ///
 /// A client should use the TypeLoc subclasses through castAs()/getAs()
 /// in order to get at the actual information.
-class TypeLoc {
+class CLANG_ABI TypeLoc {
 protected:
   // The correctness of this relies on the property that, for Type *Ty,
   //   QualType(Ty, 0).getAsOpaquePtr() == (void*) Ty

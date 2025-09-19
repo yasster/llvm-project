@@ -28,6 +28,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -185,7 +186,7 @@ struct TypeInfoChars {
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
-class ASTContext : public RefCountedBase<ASTContext> {
+class CLANG_ABI ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
@@ -3776,10 +3777,8 @@ inline Selector GetUnarySelector(StringRef name, ASTContext &Ctx) {
 /// @param Alignment The alignment of the allocated memory (if the underlying
 ///                  allocator supports it).
 /// @return The allocated memory. Could be nullptr.
-inline void *operator new(size_t Bytes, const clang::ASTContext &C,
-                          size_t Alignment /* = 8 */) {
-  return C.Allocate(Bytes, Alignment);
-}
+void *operator new(size_t Bytes, const clang::ASTContext &C,
+                   size_t Alignment);
 
 /// Placement delete companion to the new above.
 ///
@@ -3787,9 +3786,7 @@ inline void *operator new(size_t Bytes, const clang::ASTContext &C,
 /// invoking it directly; see the new operator for more details. This operator
 /// is called implicitly by the compiler if a placement new expression using
 /// the ASTContext throws in the object constructor.
-inline void operator delete(void *Ptr, const clang::ASTContext &C, size_t) {
-  C.Deallocate(Ptr);
-}
+void operator delete(void *Ptr, const clang::ASTContext &C, size_t);
 
 /// This placement form of operator new[] uses the ASTContext's allocator for
 /// obtaining memory.
@@ -3814,10 +3811,8 @@ inline void operator delete(void *Ptr, const clang::ASTContext &C, size_t) {
 /// @param Alignment The alignment of the allocated memory (if the underlying
 ///                  allocator supports it).
 /// @return The allocated memory. Could be nullptr.
-inline void *operator new[](size_t Bytes, const clang::ASTContext& C,
-                            size_t Alignment /* = 8 */) {
-  return C.Allocate(Bytes, Alignment);
-}
+void *operator new[](size_t Bytes, const clang::ASTContext& C,
+                     size_t Alignment);
 
 /// Placement delete[] companion to the new[] above.
 ///
@@ -3825,9 +3820,7 @@ inline void *operator new[](size_t Bytes, const clang::ASTContext& C,
 /// invoking it directly; see the new[] operator for more details. This operator
 /// is called implicitly by the compiler if a placement new[] expression using
 /// the ASTContext throws in the object constructor.
-inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
-  C.Deallocate(Ptr);
-}
+void operator delete[](void *Ptr, const clang::ASTContext &C, size_t);
 
 /// Create the representation of a LazyGenerationalUpdatePtr.
 template <typename Owner, typename T,

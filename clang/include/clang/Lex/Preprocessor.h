@@ -142,7 +142,7 @@ struct CXXStandardLibraryVersionInfo {
 /// Lexers know only about tokens within a single source file, and don't
 /// know anything about preprocessor-level issues like the \#include stack,
 /// token expansion, etc.
-class Preprocessor {
+class CLANG_ABI Preprocessor {
   friend class VAOptDefinitionContext;
   friend class VariadicMacroScopeGuard;
 
@@ -3126,7 +3126,7 @@ private:
 
 /// Abstract base class that describes a handler that will receive
 /// source ranges for each of the comments encountered in the source file.
-class CommentHandler {
+class CLANG_ABI CommentHandler {
 public:
   virtual ~CommentHandler();
 

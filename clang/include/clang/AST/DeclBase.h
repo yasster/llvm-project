@@ -23,6 +23,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -83,7 +84,7 @@ enum AvailabilityResult {
 /// (and its subclasses) in its Decl::operator new(). Proper alignment
 /// of all subclasses (not requiring more than the alignment of Decl) is
 /// asserted in DeclBase.cpp.
-class alignas(8) Decl {
+class CLANG_ABI alignas(8) Decl {
 public:
   /// Lists the kind of concrete classes of Decl.
   enum Kind {
@@ -1446,7 +1447,7 @@ enum class LinkageSpecLanguageIDs;
 ///   ExportDecl
 ///   BlockDecl
 ///   CapturedDecl
-class DeclContext {
+class CLANG_ABI DeclContext {
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
   /// For checking the new bits in the Serialization part.

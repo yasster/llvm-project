@@ -482,7 +482,7 @@ public:
   /// places than refersToBitField returns true.  In particular, this can
   /// return a non-null pointer even for r-values loaded from
   /// bit-fields, but it will return null for a conditional bit-field.
-  FieldDecl *getSourceBitField();
+  CLANG_ABI FieldDecl *getSourceBitField();
 
   /// If this expression refers to an enum constant, retrieve its declaration
   EnumConstantDecl *getEnumConstantDecl();
@@ -596,7 +596,7 @@ public:
   /// IR as a constant, and thus can be used as a constant initializer in C.
   /// If this expression is not constant and Culprit is non-null,
   /// it is used to store the address of first non constant expr.
-  bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
+  CLANG_ABI bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
                              const Expr **Culprit = nullptr) const;
 
   /// If this expression is an unambiguous reference to a single declaration,
@@ -840,7 +840,7 @@ public:
   /// isNullPointerConstant - C99 6.3.2.3p3 - Test if this reduces down to
   /// a Null pointer constant. The return value can further distinguish the
   /// kind of NULL pointer constant that was detected.
-  NullPointerConstantKind isNullPointerConstant(
+  CLANG_ABI NullPointerConstantKind isNullPointerConstant(
       ASTContext &Ctx,
       NullPointerConstantValueDependence NPC) const;
 
@@ -849,7 +849,7 @@ public:
   bool isOBJCGCCandidate(ASTContext &Ctx) const;
 
   /// Returns true if this expression is a bound member function.
-  bool isBoundMemberFunction(ASTContext &Ctx) const;
+  CLANG_ABI bool isBoundMemberFunction(ASTContext &Ctx) const;
 
   /// Given an expression of bound-member type, find the type
   /// of the member.  Returns null if this is an *overloaded* bound
@@ -880,7 +880,7 @@ public:
   /// * FullExpr
   /// * MaterializeTemporaryExpr
   /// * SubstNonTypeTemplateParmExpr
-  Expr *IgnoreCasts() LLVM_READONLY;
+  CLANG_ABI Expr *IgnoreCasts() LLVM_READONLY;
   const Expr *IgnoreCasts() const {
     return const_cast<Expr *>(this)->IgnoreCasts();
   }
@@ -900,7 +900,7 @@ public:
   /// also skips over implicit calls to constructors and conversion functions.
   ///
   /// FIXME: Should IgnoreImplicit do this?
-  Expr *IgnoreImplicitAsWritten() LLVM_READONLY;
+  CLANG_ABI Expr *IgnoreImplicitAsWritten() LLVM_READONLY;
   const Expr *IgnoreImplicitAsWritten() const {
     return const_cast<Expr *>(this)->IgnoreImplicitAsWritten();
   }
@@ -942,7 +942,7 @@ public:
 
   /// Skip conversion operators. If this Expr is a call to a conversion
   /// operator, return the argument.
-  Expr *IgnoreConversionOperatorSingleStep() LLVM_READONLY;
+  CLANG_ABI Expr *IgnoreConversionOperatorSingleStep() LLVM_READONLY;
   const Expr *IgnoreConversionOperatorSingleStep() const {
     return const_cast<Expr *>(this)->IgnoreConversionOperatorSingleStep();
   }
@@ -976,7 +976,7 @@ public:
   /// * What IgnoreParens() skips
   /// * CastExpr which represent a derived-to-base cast (CK_DerivedToBase,
   ///   CK_UncheckedDerivedToBase and CK_NoOp)
-  Expr *IgnoreParenBaseCasts() LLVM_READONLY;
+  CLANG_ABI Expr *IgnoreParenBaseCasts() LLVM_READONLY;
   const Expr *IgnoreParenBaseCasts() const {
     return const_cast<Expr *>(this)->IgnoreParenBaseCasts();
   }
@@ -988,7 +988,7 @@ public:
   /// C++. Default arguments are represented by \c CXXDefaultArgExpr nodes;
   /// this routine also looks through any implicit casts to determine whether
   /// the expression is a default argument.
-  bool isDefaultArgument() const;
+  CLANG_ABI bool isDefaultArgument() const;
 
   /// Determine whether the result of this expression is a
   /// temporary object of the given class type.
@@ -1006,7 +1006,7 @@ public:
   /// most derived decl that can be inferred from the expression.
   /// This is valid because derived-to-base conversions have undefined
   /// behavior if the object isn't dynamically of the derived type.
-  const CXXRecordDecl *getBestDynamicClassType() const;
+  CLANG_ABI const CXXRecordDecl *getBestDynamicClassType() const;
 
   /// Get the inner expression that determines the best dynamic class.
   /// If this is a prvalue, we guarantee that it is of the most-derived type
@@ -1354,7 +1354,7 @@ public:
     return DeclRefExprBits.Loc;
   }
 
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  CLANG_ABI SourceLocation getEndLoc() const LLVM_READONLY;
 
   /// Determine whether this declaration reference was preceded by a
   /// C++ nested-name-specifier, e.g., \c N::foo.
@@ -1704,7 +1704,7 @@ public:
   /// getValueAsApproximateDouble - This returns the value as an inaccurate
   /// double.  Note that this may cause loss of precision, but is useful for
   /// debugging dumps, etc.
-  double getValueAsApproximateDouble() const;
+  CLANG_ABI double getValueAsApproximateDouble() const;
 
   SourceLocation getLocation() const { return Loc; }
   void setLocation(SourceLocation L) { Loc = L; }
@@ -1879,7 +1879,7 @@ public:
     return StringRef(getStrDataAsChar(), getByteLength());
   }
 
-  void outputString(raw_ostream &OS) const;
+  CLANG_ABI void outputString(raw_ostream &OS) const;
 
   uint32_t getCodeUnit(size_t i) const {
     assert(i < getLength() && "out of bounds access");
@@ -3192,7 +3192,7 @@ public:
   /// getCallReturnType - Get the return type of the call expr. This is not
   /// always the type of the expr itself, if the return type is a reference
   /// type.
-  QualType getCallReturnType(const ASTContext &Ctx) const;
+  CLANG_ABI QualType getCallReturnType(const ASTContext &Ctx) const;
 
   /// Returns the WarnUnusedResultAttr that is declared on the callee
   /// or its return type declaration, together with a NamedDecl that
@@ -3489,8 +3489,8 @@ public:
   SourceLocation getMemberLoc() const { return MemberLoc; }
   void setMemberLoc(SourceLocation L) { MemberLoc = L; }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY;
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  CLANG_ABI SourceLocation getBeginLoc() const LLVM_READONLY;
+  CLANG_ABI SourceLocation getEndLoc() const LLVM_READONLY;
 
   SourceLocation getExprLoc() const LLVM_READONLY { return MemberLoc; }
 
@@ -3666,7 +3666,7 @@ public:
   /// Retrieve the cast subexpression as it was written in the source
   /// code, looking through any implicit casts or other intermediate nodes
   /// introduced by semantic analysis.
-  Expr *getSubExprAsWritten();
+  CLANG_ABI Expr *getSubExprAsWritten();
   const Expr *getSubExprAsWritten() const {
     return const_cast<CastExpr *>(this)->getSubExprAsWritten();
   }
@@ -5387,7 +5387,7 @@ public:
   /// Is this a transparent initializer list (that is, an InitListExpr that is
   /// purely syntactic, and whose semantics are that of the sole contained
   /// initializer)?
-  bool isTransparent() const;
+  CLANG_ABI bool isTransparent() const;
 
   /// Is this the zero initializer {0} in a language which considers it
   /// idiomatic?

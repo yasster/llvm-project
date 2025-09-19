@@ -41,6 +41,7 @@
 #define LLVM_CLANG_ASTMATCHERS_ASTMATCHFINDER_H
 
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Timer.h"
@@ -66,7 +67,7 @@ namespace ast_matchers {
 /// See ASTMatchers.h for more information about how to create matchers.
 ///
 /// Not intended to be subclassed.
-class MatchFinder {
+class CLANG_ABI MatchFinder {
 public:
   /// Contains all information for a given match.
   ///
@@ -289,7 +290,7 @@ selectFirst(StringRef BoundTo, const SmallVectorImpl<BoundNodes> &Results) {
 }
 
 namespace internal {
-class CollectMatchesCallback : public MatchFinder::MatchCallback {
+class CLANG_ABI CollectMatchesCallback : public MatchFinder::MatchCallback {
 public:
   void run(const MatchFinder::MatchResult &Result) override {
     Nodes.push_back(Result.Nodes);

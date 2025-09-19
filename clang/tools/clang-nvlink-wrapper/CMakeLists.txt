@@ -36,7 +36,7 @@ set(CLANG_NVLINK_WRAPPER_LIB_DEPS
   clangBasic
   )
 
-target_link_libraries(clang-nvlink-wrapper
+clang_target_link_libraries(clang-nvlink-wrapper
   PRIVATE
   ${CLANG_NVLINK_WRAPPER_LIB_DEPS}
   )

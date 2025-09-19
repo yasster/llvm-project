@@ -14,6 +14,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <memory>
 
@@ -46,12 +47,12 @@ std::unique_ptr<ASTConsumer> createIndexingASTConsumer(
     std::function<bool(const Decl *)> ShouldSkipFunctionBody);
 
 /// Creates a frontend action that indexes all symbols (macros and AST decls).
-std::unique_ptr<FrontendAction>
+CLANG_ABI std::unique_ptr<FrontendAction>
 createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      const IndexingOptions &Opts);
 
 /// Recursively indexes all decls in the AST.
-void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
+CLANG_ABI void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
                   IndexingOptions Opts);
 
 /// Recursively indexes \p Decls.
@@ -65,7 +66,7 @@ std::unique_ptr<PPCallbacks> indexMacrosCallback(IndexDataConsumer &Consumer,
                                                  IndexingOptions Opts);
 
 /// Recursively indexes all top-level decls in the module.
-void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
+CLANG_ABI void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
                      IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 } // namespace index

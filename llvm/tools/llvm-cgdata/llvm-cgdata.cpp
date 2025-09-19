@@ -364,8 +364,9 @@ static void parseArgs(int argc, char **argv) {
     llvm_unreachable("unrecognized action");
   }
 
-  IndexedCodeGenDataLazyLoading =
-      Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
+  // cl::opt should handle this automatically
+  // IndexedCodeGenDataLazyLoading =
+  //     Args.hasArg(OPT_indexed_codegen_data_lazy_loading);
 }
 
 int llvm_cgdata_main(int argc, char **argvNonConst, const llvm::ToolContext &) {

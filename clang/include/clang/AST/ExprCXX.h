@@ -90,7 +90,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   // CXXOperatorCallExpr has some trailing objects belonging
   // to CallExpr. See CallExpr for the details.
 
-  SourceRange getSourceRangeImpl() const LLVM_READONLY;
+  CLANG_ABI SourceRange getSourceRangeImpl() const LLVM_READONLY;
 
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
@@ -142,7 +142,7 @@ public:
   bool isComparisonOp() const { return isComparisonOp(getOperator()); }
 
   /// Is this written as an infix binary operator?
-  bool isInfixBinaryOp() const;
+  CLANG_ABI bool isInfixBinaryOp() const;
 
   /// Returns the location of the operator symbol in the expression.
   ///
@@ -687,12 +687,12 @@ public:
 
   /// Returns the kind of literal operator invocation
   /// which this expression represents.
-  LiteralOperatorKind getLiteralOperatorKind() const;
+  CLANG_ABI LiteralOperatorKind getLiteralOperatorKind() const;
 
   /// If this is not a raw user-defined literal, get the
   /// underlying cooked literal (representing the literal with the suffix
   /// removed).
-  Expr *getCookedLiteral();
+  CLANG_ABI Expr *getCookedLiteral();
   const Expr *getCookedLiteral() const {
     return const_cast<UserDefinedLiteral*>(this)->getCookedLiteral();
   }
@@ -1318,7 +1318,7 @@ public:
   }
 
   // Retrieve the argument to the function call.
-  Expr *getExpr();
+  CLANG_ABI Expr *getExpr();
   const Expr *getExpr() const {
     return const_cast<CXXDefaultArgExpr *>(this)->getExpr();
   }
@@ -2125,7 +2125,7 @@ public:
   /// This is the "closure type" (C++1y [expr.prim.lambda]), and stores the
   /// captures in its fields and provides the various operations permitted
   /// on a lambda (copying, calling).
-  CXXRecordDecl *getLambdaClass() const;
+  CLANG_ABI CXXRecordDecl *getLambdaClass() const;
 
   /// Retrieve the function call operator associated with this
   /// lambda expression.

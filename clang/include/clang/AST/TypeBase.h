@@ -32,6 +32,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -934,7 +935,7 @@ enum class TypeOfKind : uint8_t {
 /// simple wrapper class that acts like a smart pointer.  A third bit
 /// indicates whether there are extended qualifiers present, in which
 /// case the pointer points to a special structure.
-class QualType {
+class CLANG_ABI QualType {
   friend class QualifierCollector;
 
   // Thankfully, these are efficiently composable.
@@ -1830,7 +1831,7 @@ enum class VectorKind;
 ///
 /// Types, once created, are immutable.
 ///
-class alignas(TypeAlignment) Type : public ExtQualsTypeCommonBase {
+class CLANG_ABI alignas(TypeAlignment) Type : public ExtQualsTypeCommonBase {
 public:
   enum TypeClass {
 #define TYPE(Class, Base) Class,

@@ -22,6 +22,7 @@
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
@@ -68,7 +69,7 @@ enum class PointerAuthenticationMode : unsigned {
 
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
-class LangOptionsBase {
+class CLANG_ABI LangOptionsBase {
   friend class CompilerInvocation;
   friend class CompilerInvocationBase;
 
@@ -431,7 +432,7 @@ protected:
 
 /// Keeps track of the various options that can be
 /// enabled, which controls the dialect of C or C++ that is accepted.
-class LangOptions : public LangOptionsBase {
+class CLANG_ABI LangOptions : public LangOptionsBase {
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;

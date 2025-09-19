@@ -28,6 +28,7 @@
 #define LLVM_CLANG_TOOLING_COMPILATIONDATABASE_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -84,7 +85,7 @@ struct CompileCommand {
 /// Many implementations are enumerable, allowing all command lines to be
 /// retrieved. These can be used to run clang tools over a subset of the files
 /// in a project.
-class CompilationDatabase {
+class CLANG_ABI CompilationDatabase {
 public:
   virtual ~CompilationDatabase();
 
@@ -151,7 +152,7 @@ public:
 ///
 /// Useful when we want a tool to behave more like a compiler invocation.
 /// This compilation database is not enumerable: getAllFiles() returns {}.
-class FixedCompilationDatabase : public CompilationDatabase {
+class CLANG_ABI FixedCompilationDatabase : public CompilationDatabase {
 public:
   /// Creates a FixedCompilationDatabase from the arguments after "--".
   ///

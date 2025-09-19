@@ -17,6 +17,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
 #include <optional>
@@ -297,7 +298,7 @@ public:
   create(ASTContext &Context, DiagnosticsEngine &Diags, bool IsAux = false);
 };
 
-class ASTNameGenerator {
+class CLANG_ABI ASTNameGenerator {
 public:
   explicit ASTNameGenerator(ASTContext &Ctx);
   ~ASTNameGenerator();

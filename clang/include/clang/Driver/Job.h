@@ -11,6 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/InputInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -103,7 +104,7 @@ struct ResponseFileSupport {
 
 /// Command - An executable path/name and argument vector to
 /// execute.
-class Command {
+class CLANG_ABI Command {
   /// Source - The action which caused the creation of this job.
   const Action &Source;
 
@@ -257,7 +258,7 @@ public:
 };
 
 /// JobList - A sequence of jobs to perform.
-class JobList {
+class CLANG_ABI JobList {
 public:
   using list_type = SmallVector<std::unique_ptr<Command>, 4>;
   using size_type = list_type::size_type;
@@ -285,6 +286,15 @@ public:
   const_iterator begin() const { return Jobs.begin(); }
   iterator end() { return Jobs.end(); }
   const_iterator end() const { return Jobs.end(); }
+
+  // Delete copy constructor and assignment operator to prevent copying
+  JobList(const JobList&) = delete;
+  JobList& operator=(const JobList&) = delete;
+  
+  // Allow move operations
+  JobList() = default;
+  JobList(JobList&&) = default;
+  JobList& operator=(JobList&&) = default;
 };
 
 } // namespace driver
