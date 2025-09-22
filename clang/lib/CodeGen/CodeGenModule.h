@@ -1175,7 +1175,8 @@ public:
   /// Return a pointer to a constant array for the given string literal.
   ConstantAddress
   GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
-                                     StringRef Name = ".str");
+                                     StringRef Name = ".str",
+                                     llvm::Function *CurrentFunc = nullptr);
 
   /// Return a pointer to a constant array for the given ObjCEncodeExpr node.
   ConstantAddress

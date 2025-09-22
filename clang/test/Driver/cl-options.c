@@ -200,6 +200,10 @@
 // Ox: -O3
 // Ox: -mframe-pointer=none
 
+// RUN: %clang_cl /cbstring --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=cbstring %s
+// RUN: %clang_cl /cbstring --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=cbstring %s
+// cbstring: -fms-cbstring
+
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
 // PR24003: -Os
 // PR24003: -mframe-pointer=all

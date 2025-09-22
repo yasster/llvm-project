@@ -150,6 +150,7 @@ CODEGENOPT(HotPatch, 1, 0, Benign) ///< Supports the Microsoft /HOTPATCH flag an
                                    ///< generates a 'patchable-function' attribute.
 
 CODEGENOPT(TlsGuards , 1, 1, Benign) ///< Controls emission of tls guards via -fms-tls-guards
+CODEGENOPT(CBString, 1, 0, Benign) ///< Place string literals in .text section (Microsoft /cbstring flag)
 CODEGENOPT(JMCInstrument, 1, 0, Benign) ///< Set when -fjmc is enabled.
 CODEGENOPT(InstrumentForProfiling , 1, 0, Benign) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0, Benign) ///< Set when -mfentry is enabled.

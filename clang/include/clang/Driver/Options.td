@@ -3927,6 +3927,10 @@ def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
   MarshallingInfoFlag<CodeGenOpts<"HotPatch">>;
+def fms_cbstring : Flag<["-"], "fms-cbstring">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Place string literals in .text section">,
+  MarshallingInfoFlag<CodeGenOpts<"CBString">>;
 
 // See llvm/lib/CodeGen/WindowsSecureHotPatching.cpp
 def fms_secure_hotpatch_functions_file
@@ -9137,6 +9141,8 @@ def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   Alias<mbranches_within_32B_boundaries>;
 def _SLASH_arm64EC : CLFlag<"arm64EC">,
   HelpText<"Set build target to arm64ec">;
+def _SLASH_cbstring : CLFlag<"cbstring">, Alias<fms_cbstring>,
+  HelpText<"Place string literals in .text section">;
 def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
