@@ -6891,7 +6891,7 @@ CodeGenModule::GetConstantArrayFromStringLiteral(const StringLiteral *E) {
 static llvm::GlobalVariable *
 GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
                       CodeGenModule &CGM, StringRef GlobalName,
-                      CharUnits Alignment) {
+                      CharUnits Alignment, llvm::Function *CurrentFunc = nullptr) {
   unsigned AddrSpace = CGM.getContext().getTargetAddressSpace(
       CGM.GetGlobalConstantAddressSpace());
 
@@ -6908,6 +6908,22 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
   }
   CGM.setDSOLocal(GV);
 
+  // If /cbstring flag is enabled, place function-local string literals in code
+  // sections following MSVC behavior:
+  // - Function strings without custom section → .text$s
+  // - Function strings with custom section → <section>$s
+  // - Global strings → default section (like MSVC's CONST)
+  if (CGM.getCodeGenOpts().CBString && CurrentFunc) {
+    if (CurrentFunc->hasSection()) {
+      // Function has a custom section, append $s to it
+      GV->setSection((Twine(CurrentFunc->getSection()) + "$s").str());
+    } else {
+      // Function has no custom section, use .text$s
+      GV->setSection(".text$s");
+    }
+  }
+  // Note: Global strings (CurrentFunc == nullptr) keep default section behavior
+
   return GV;
 }
 
@@ -6915,7 +6931,8 @@ GenerateStringLiteral(llvm::Constant *C, llvm::GlobalValue::LinkageTypes LT,
 /// constant array for the given string literal.
 ConstantAddress
 CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
-                                                  StringRef Name) {
+                                                  StringRef Name,
+                                                  llvm::Function *CurrentFunc) {
   CharUnits Alignment =
       getContext().getAlignOfGlobalVarInChars(S->getType(), /*VD=*/nullptr);
 
@@ -6949,7 +6966,7 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
     GlobalVariableName = Name;
   }
 
-  auto GV = GenerateStringLiteral(C, LT, *this, GlobalVariableName, Alignment);
+  auto GV = GenerateStringLiteral(C, LT, *this, GlobalVariableName, Alignment, CurrentFunc);
 
   CGDebugInfo *DI = getModuleDebugInfo();
   if (DI && getCodeGenOpts().hasReducedDebugInfo())

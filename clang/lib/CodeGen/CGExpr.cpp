@@ -3489,7 +3489,7 @@ LValue CodeGenFunction::EmitUnaryOpLValue(const UnaryOperator *E) {
 }
 
 LValue CodeGenFunction::EmitStringLiteralLValue(const StringLiteral *E) {
-  return MakeAddrLValue(CGM.GetAddrOfConstantStringFromLiteral(E),
+  return MakeAddrLValue(CGM.GetAddrOfConstantStringFromLiteral(E, ".str", CurFn),
                         E->getType(), AlignmentSource::Decl);
 }
 
@@ -3520,7 +3520,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     }
   }
-  auto C = CGM.GetAddrOfConstantStringFromLiteral(SL, GVName);
+  auto C = CGM.GetAddrOfConstantStringFromLiteral(SL, GVName, CurFn);
   return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
 }
 

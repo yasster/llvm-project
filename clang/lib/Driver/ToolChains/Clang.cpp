@@ -6769,6 +6769,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_fms_hotpatch);
+  Args.AddLastArg(CmdArgs, options::OPT_fms_cbstring);
 
   if (Args.hasArg(options::OPT_fms_secure_hotpatch_functions_file))
     Args.AddLastArg(CmdArgs, options::OPT_fms_secure_hotpatch_functions_file);
