@@ -114,6 +114,8 @@ CODEGENOPT(IndirectBranchCSPrefix, 1, 0, Benign) ///< if -mindirect-branch-cs-pr
 CODEGENOPT(XRayInstrumentFunctions , 1, 0, Benign) ///< Set when -fxray-instrument is
                                                    ///< enabled.
 CODEGENOPT(StackSizeSection  , 1, 0, Benign) ///< Set when -fstack-size-section is enabled.
+CODEGENOPT(X64ForceJumpTableInFunctionSection, 1, 0, Benign) ///< Set when -fx64-force-jumptable-in-function-section is enabled.
+                                                             ///< Forces jump tables to be placed in function section (.text) instead of .rdata on x64.
 
 ///< Set when -femit-compact-unwind-non-canonical is enabled.
 CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)

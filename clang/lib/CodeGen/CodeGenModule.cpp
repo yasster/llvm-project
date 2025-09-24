@@ -1250,6 +1250,11 @@ void CodeGenModule::Release() {
                               1);
   }
 
+  if (CodeGenOpts.X64ForceJumpTableInFunctionSection) {
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "x64-force-jumptable-in-function-section", 1);
+  }
+
   if (!CodeGenOpts.UniqueSourceFileIdentifier.empty()) {
     getModule().addModuleFlag(
         llvm::Module::Append, "Unique Source File Identifier",
