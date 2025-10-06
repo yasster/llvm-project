@@ -4500,6 +4500,11 @@ defm stack_size_section : BoolFOption<"stack-size-section",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Emit section containing metadata on function stack sizes">,
   NegFlag<SetFalse>>;
+defm x64_force_jumptable_in_function_section : BoolFOption<"x64-force-jumptable-in-function-section",
+  CodeGenOpts<"X64ForceJumpTableInFunctionSection">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Force placing jump tables in function section (.text) instead of read-only section (.rdata) on x64">,
+  NegFlag<SetFalse>>;
 def frealloc_lhs : Flag<["-"], "frealloc-lhs">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
   HelpText<"If an allocatable left-hand side of an intrinsic assignment is unallocated or its shape/type does not match the right-hand side, then it is automatically (re)allocated">;

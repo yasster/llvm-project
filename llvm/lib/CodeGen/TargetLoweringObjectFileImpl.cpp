@@ -1889,6 +1889,14 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
 bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
     bool UsesLabelDifference, const Function &F) const {
   if (TM->getTargetTriple().getArch() == Triple::x86_64) {
+    // Check the module flag
+    if (const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(
+            F.getParent()->getModuleFlag(
+              "x64-force-jumptable-in-function-section"))) {
+      if (CI->getZExtValue())
+        return true;
+    }
+
     if (!JumpTableInFunctionSection) {
       // We can always create relative relocations, so use another section
       // that can be marked non-executable.

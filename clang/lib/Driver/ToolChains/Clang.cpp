@@ -6163,6 +6163,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-ffunction-sections");
   }
 
+  if (Args.hasFlag(options::OPT_fx64_force_jumptable_in_function_section,
+                   options::OPT_fno_x64_force_jumptable_in_function_section,
+                   false)) {
+    CmdArgs.push_back("-fx64-force-jumptable-in-function-section");
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_address_map,
                                options::OPT_fno_basic_block_address_map)) {
     if ((Triple.isX86() || Triple.isAArch64()) && Triple.isOSBinFormatELF()) {
