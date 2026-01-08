@@ -61,6 +61,10 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// the __CxxFrameHandler3 personality.
   void emitCXXFrameHandler3Table(const MachineFunction *MF);
 
+  /// Emit the EH table data for functions using the __CxxFrameHandler4
+  /// personality with compressed format.
+  void emitCXXFrameHandler4Table(const MachineFunction *MF);
+
   /// Emit the EH table data for _except_handler3 and _except_handler4
   /// personality functions. These are only used on 32-bit and do not use CFI
   /// tables.

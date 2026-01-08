@@ -30,6 +30,7 @@ enum class EHPersonality {
   MSVC_X86SEH,
   MSVC_TableSEH,
   MSVC_CXX,
+  MSVC_CXX4,
   CoreCLR,
   Rust,
   Wasm_CXX,
@@ -66,6 +67,7 @@ inline bool isAsynchronousEHPersonality(EHPersonality Pers) {
 inline bool isFuncletEHPersonality(EHPersonality Pers) {
   switch (Pers) {
   case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_CXX4:
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_TableSEH:
   case EHPersonality::CoreCLR:
@@ -81,6 +83,7 @@ inline bool isFuncletEHPersonality(EHPersonality Pers) {
 inline bool isScopedEHPersonality(EHPersonality Pers) {
   switch (Pers) {
   case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_CXX4:
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_TableSEH:
   case EHPersonality::CoreCLR:
@@ -90,6 +93,11 @@ inline bool isScopedEHPersonality(EHPersonality Pers) {
     return false;
   }
   llvm_unreachable("invalid enum");
+}
+
+/// Returns true if this is an MSVC C++ personality (FH3 or FH4).
+inline bool isMSVCCXXPersonality(EHPersonality Pers) {
+  return Pers == EHPersonality::MSVC_CXX || Pers == EHPersonality::MSVC_CXX4;
 }
 
 /// Return true if this personality may be safely removed if there

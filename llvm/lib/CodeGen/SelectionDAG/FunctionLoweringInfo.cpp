@@ -108,7 +108,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   if (isFuncletEHPersonality(Personality)) {
     // Calculate state numbers if we haven't already.
     WinEHFuncInfo &EHInfo = *MF->getWinEHFuncInfo();
-    if (Personality == EHPersonality::MSVC_CXX)
+    if (isMSVCCXXPersonality(Personality))
       calculateWinCXXEHStateNumbers(&fn, EHInfo);
     else if (isAsynchronousEHPersonality(Personality))
       calculateSEHStateNumbers(&fn, EHInfo);
