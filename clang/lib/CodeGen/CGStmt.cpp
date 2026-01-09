@@ -1750,7 +1750,19 @@ auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
-  assert(!BreakContinueStack.empty() && "break stmt not in a loop or switch!");
+  // If we're in an outlined SEH finally function and there's no loop context,
+  // this is a jump out of __finally which has undefined behavior.
+  // Emit a trap instead of crashing.
+  if (BreakContinueStack.empty()) {
+    assert(ParentCGF && "break stmt not in a loop or switch!");
+    if (HaveInsertPoint()) {
+      EmitStopPoint(&S);
+      EmitTrapCall(llvm::Intrinsic::trap);
+      Builder.CreateUnreachable();
+      Builder.ClearInsertionPoint();
+    }
+    return;
+  }
 
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
@@ -1763,7 +1775,19 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
-  assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
+  // If we're in an outlined SEH finally function and there's no loop context,
+  // this is a jump out of __finally which has undefined behavior.
+  // Emit a trap instead of crashing.
+  if (BreakContinueStack.empty()) {
+    assert(ParentCGF && "continue stmt not in a loop!");
+    if (HaveInsertPoint()) {
+      EmitStopPoint(&S);
+      EmitTrapCall(llvm::Intrinsic::trap);
+      Builder.CreateUnreachable();
+      Builder.ClearInsertionPoint();
+    }
+    return;
+  }
 
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
