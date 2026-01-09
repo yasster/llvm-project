@@ -3949,6 +3949,11 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
     if (hasBody(Definition) && Definition->isInlined() &&
         redeclForcesDefMSVC(this))
       return true;
+    // In MSVC compatibility mode, non-extern redeclarations of inline functions
+    // do not force an externally visible definition (unlike C99 semantics).
+    // MSVC always treats inline functions with ODR linkage that can be
+    // discarded if not referenced.
+    return false;
   }
 
   if (Context.getLangOpts().CPlusPlus)

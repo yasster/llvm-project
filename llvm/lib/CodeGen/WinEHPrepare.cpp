@@ -183,6 +183,22 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CleanupPad) {
   for (const User *U : CleanupPad->users())
     if (const auto *CRI = dyn_cast<CleanupReturnInst>(U))
       return CRI->getUnwindDest();
+
+  // No cleanupret found - this can happen when the finally handler contains a
+  // noreturn function like longjmp, causing the cleanupret to be optimized
+  // away. Look for seh_scope_end invoke within this funclet which tells us
+  // where this cleanup would unwind to.
+  for (const User *U : CleanupPad->users()) {
+    if (const auto *II = dyn_cast<InvokeInst>(U)) {
+      if (const Function *Fn = II->getCalledFunction()) {
+        if (Fn->isIntrinsic() &&
+            Fn->getIntrinsicID() == Intrinsic::seh_scope_end) {
+          return II->getUnwindDest();
+        }
+      }
+    }
+  }
+
   return nullptr;
 }
 
@@ -354,12 +370,31 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
 }
 
 // Given BB which ends in an unwind edge, return the EHPad that this BB belongs
-// to. If the unwind edge came from an invoke, return null.
+// to. If the unwind edge came from an invoke, return null unless the invoke is
+// for seh_scope_end within a cleanup funclet (which indicates the parent
+// relationship when there's no cleanupret due to noreturn functions).
 static const BasicBlock *getEHPadFromPredecessor(const BasicBlock *BB,
                                                  Value *ParentPad) {
   const Instruction *TI = BB->getTerminator();
-  if (isa<InvokeInst>(TI))
+  if (auto *II = dyn_cast<InvokeInst>(TI)) {
+    // Check if this is an seh_scope_end invoke in a cleanup funclet.
+    // This happens when the cleanup contains a noreturn function and has
+    // no cleanupret.
+    if (const Function *Fn = II->getCalledFunction()) {
+      if (Fn->isIntrinsic() &&
+          Fn->getIntrinsicID() == Intrinsic::seh_scope_end) {
+        // The funclet bundle tells us which cleanup pad this belongs to
+        if (auto Bundle = II->getOperandBundle(LLVMContext::OB_funclet)) {
+          if (auto *CleanupPad =
+                  dyn_cast<CleanupPadInst>(Bundle->Inputs.front())) {
+            if (CleanupPad->getParentPad() == ParentPad)
+              return CleanupPad->getParent();
+          }
+        }
+      }
+    }
     return nullptr;
+  }
   if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(TI)) {
     if (CatchSwitch->getParentPad() != ParentPad)
       return nullptr;

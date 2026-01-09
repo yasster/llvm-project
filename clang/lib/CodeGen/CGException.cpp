@@ -2216,25 +2216,42 @@ void CodeGenFunction::ExitSEHTryStmt(const SEHTryStmt &S) {
     return;
   }
 
+  // Otherwise, we must have an __except block.
+  const SEHExceptStmt *Except = S.getExceptHandler();
+  assert(Except && "__try must have __finally xor __except");
+  EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
+
   // IsEHa: emit an invoke _seh_try_end() to mark end of FT flow
   if (getLangOpts().EHAsynch && Builder.GetInsertBlock()) {
     llvm::FunctionCallee SehTryEnd = getSehTryEndFn(CGM);
     EmitRuntimeCallOrInvoke(SehTryEnd);
   }
 
-  // Otherwise, we must have an __except block.
-  const SEHExceptStmt *Except = S.getExceptHandler();
-  assert(Except && "__try must have __finally xor __except");
-  EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
-
   // Don't emit the __except block if the __try block lacked invokes.
-  // TODO: Model unwind edges from instructions, either with iload / istore or
-  // a try body function.
-  if (!CatchScope.hasEHBranches()) {
+  // However, on Windows with SEH without -fasync-exceptions, we must always
+  // emit the handler because hardware exceptions can occur from any instruction.
+  bool IsWindowsSEHNoAsync = CGM.getTarget().getTriple().isOSWindows() &&
+                              !getLangOpts().EHAsynch;
+  if (!CatchScope.hasEHBranches() && !IsWindowsSEHNoAsync) {
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
     SEHCodeSlotStack.pop_back();
     return;
+  }
+
+  // On Windows SEH without async exceptions and without invokes, we need to
+  // ensure the dispatch block exists and that the function has a personality
+  // function. Normally these are set up when emitting invokes, but for SEH
+  // we need them even without invokes. When using -fasync-exceptions, the
+  // seh_try_begin/end intrinsics are emitted as invokes which set this up.
+  if (IsWindowsSEHNoAsync && !CatchScope.getCachedEHDispatchBlock()) {
+    llvm::BasicBlock *DispatchBlock = createBasicBlock("catch.dispatch");
+    CatchScope.setCachedEHDispatchBlock(DispatchBlock);
+
+    // Ensure the function has a personality function for the EH instructions.
+    const EHPersonality &Personality = EHPersonality::get(*this);
+    if (!CurFn->hasPersonalityFn())
+      CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
   }
 
   // The fall-through block.
