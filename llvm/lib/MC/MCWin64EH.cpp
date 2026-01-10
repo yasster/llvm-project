@@ -8,13 +8,16 @@
 
 #include "llvm/MC/MCWin64EH.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Win64EH.h"
 
 namespace llvm {
@@ -417,12 +420,108 @@ bool MCUnwindV2EpilogTargetExpr::evaluateAsRelocatableImpl(
   return true;
 }
 
+/// Emit a .NET compressed integer for FH4.
+/// Encoding scheme:
+///   - Values 0-127: 1 byte, (value << 1) | 0  (low bit 0)
+///   - Values 128-16383: 2 bytes, (value << 2) | 1  (low 2 bits 01)
+///   - Values 16384+: 4 bytes, (value << 3) | 3  (low 3 bits 011)
+/// This matches Microsoft's encoding in CxxFrameHandler4.
+static void emitFH4NetEncodedInt(MCStreamer &Streamer, uint32_t Value) {
+  if (Value < 128) {
+    // 1-byte encoding: low bit is 0
+    Streamer.emitInt8(Value << 1);
+  } else if (Value < 0x4000) {
+    // 2-byte encoding: low 2 bits are 01, big-endian
+    uint16_t Encoded = (Value << 2) | 1;
+    Streamer.emitInt8((Encoded >> 8) & 0xFF);
+    Streamer.emitInt8(Encoded & 0xFF);
+  } else {
+    // 4-byte encoding: low 3 bits are 011, big-endian
+    uint32_t Encoded = (Value << 3) | 3;
+    Streamer.emitInt8((Encoded >> 24) & 0xFF);
+    Streamer.emitInt8((Encoded >> 16) & 0xFF);
+    Streamer.emitInt8((Encoded >> 8) & 0xFF);
+    Streamer.emitInt8(Encoded & 0xFF);
+  }
+}
+
+/// Emit FH4 IP2State table.
+static void EmitFH4IP2StateTable(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
+  if (Info->FH4IP2StateTable.empty() || !Info->FH4IP2StateSym)
+    return;
+
+  MCContext &Context = Streamer.getContext();
+  MCObjectStreamer *OS = (MCObjectStreamer *)(&Streamer);
+
+  // Get the function start symbol for computing offsets
+  const MCSymbol *FuncBegin = Info->Begin;
+  if (!FuncBegin) {
+    Context.reportError(SMLoc(), 
+        "Missing function begin symbol for FH4 IP2State table");
+    return;
+  }
+
+  // Create a separate COMDAT section for IP2State like MSVC does.
+  // The section name follows MSVC format: $ip2state$<funcname>
+  // We need to create an associative COMDAT section.
+  StringRef IP2StateSymName = Info->FH4IP2StateSym->getName();
+  
+  // Section characteristics for IP2State data:
+  // IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_LNK_COMDAT | IMAGE_SCN_MEM_READ | IMAGE_SCN_ALIGN_1BYTES
+  unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                             COFF::IMAGE_SCN_LNK_COMDAT |
+                             COFF::IMAGE_SCN_MEM_READ |
+                             COFF::IMAGE_SCN_ALIGN_1BYTES;
+  
+  // Create the section with the ip2state symbol as the COMDAT symbol
+  MCSectionCOFF *IP2StateSection = Context.getCOFFSection(
+      ".xdata", Characteristics, IP2StateSymName,
+      COFF::IMAGE_COMDAT_SELECT_ANY);
+  
+  Streamer.switchSection(IP2StateSection);
+  Streamer.emitLabel(Info->FH4IP2StateSym);
+
+  // Emit NumEntries with .NET encoding
+  emitFH4NetEncodedInt(Streamer, Info->FH4IP2StateTable.size());
+
+  // Delta encoding: each IP offset is relative to the previous IP.
+  const MCSymbol *PrevLabel = FuncBegin;
+  for (size_t i = 0; i < Info->FH4IP2StateTable.size(); ++i) {
+    const auto &Entry = Info->FH4IP2StateTable[i];
+
+    // Compute delta offset
+    uint32_t Delta = 0;
+    if (Entry.Label && Entry.Label != PrevLabel) {
+      auto MaybeOffset = GetOptionalAbsDifference(OS->getAssembler(), 
+                                                   Entry.Label, PrevLabel);
+      if (MaybeOffset && *MaybeOffset >= 0) {
+        Delta = static_cast<uint32_t>(*MaybeOffset);
+      } else {
+        Delta = 1; // Fallback for cross-fragment labels
+      }
+      PrevLabel = Entry.Label;
+    }
+    
+    // Emit delta with .NET encoding
+    emitFH4NetEncodedInt(Streamer, Delta);
+
+    // State is encoded as (state + 1) to handle -1 state becoming 0
+    uint32_t EncodedState = static_cast<uint32_t>(Entry.State + 1);
+    emitFH4NetEncodedInt(Streamer, EncodedState);
+  }
+}
+
 void llvm::Win64EH::UnwindEmitter::Emit(MCStreamer &Streamer) const {
   // Emit the unwind info structs first.
   for (const auto &CFI : Streamer.getWinFrameInfos()) {
     MCSection *XData = Streamer.getAssociatedXDataSection(CFI->TextSection);
     Streamer.switchSection(XData);
     ::EmitUnwindInfo(Streamer, CFI.get());
+  }
+
+  // Emit FH4 IP2State tables (these need symbol offsets computed at layout time)
+  for (const auto &CFI : Streamer.getWinFrameInfos()) {
+    EmitFH4IP2StateTable(Streamer, CFI.get());
   }
 
   // Now emit RUNTIME_FUNCTION entries.

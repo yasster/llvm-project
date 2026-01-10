@@ -3314,6 +3314,10 @@ defm ms_volatile : BoolFOption<"ms-volatile",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Volatile loads and stores have acquire and release semantics">,
   NegFlag<SetFalse>>;
+def fms_cxx_fh4 : Flag<["-"], "fms-cxx-fh4">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use __CxxFrameHandler4 for C++ exception handling (smaller tables)">,
+  MarshallingInfoFlag<LangOpts<"CXXFH4">>;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))">;
@@ -9363,6 +9367,8 @@ def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
   HelpText<"Best effort generate unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
   HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
+def _SLASH_d2FH4 : CLFlag<"d2FH4">,
+  HelpText<"Use __CxxFrameHandler4 for C++ exception handling (smaller tables)">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;

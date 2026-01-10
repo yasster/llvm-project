@@ -86,6 +86,22 @@ struct FrameInfo {
 
   std::vector<Segment> Segments;
 
+  /// FH4 (CxxFrameHandler4) IP2State table entries.
+  /// Each entry is a (Label, State) pair. Offsets are computed at emission
+  /// time by calculating the symbol difference from Function start.
+  struct FH4IP2StateEntry {
+    const MCSymbol *Label;
+    int State;
+    FH4IP2StateEntry(const MCSymbol *L, int S) : Label(L), State(S) {}
+  };
+  std::vector<FH4IP2StateEntry> FH4IP2StateTable;
+
+  /// Symbol for the FH4 FuncInfo data (e.g., $cppxdata$funcname)
+  MCSymbol *FH4FuncInfoSym = nullptr;
+
+  /// Symbol for the FH4 IP2State table (e.g., $ip2state$funcname)
+  MCSymbol *FH4IP2StateSym = nullptr;
+
   FrameInfo() = default;
   FrameInfo(const MCSymbol *Function, const MCSymbol *BeginFuncEHLabel)
       : Begin(BeginFuncEHLabel), Function(Function) {}

@@ -4736,6 +4736,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::MSVC_X86SEH:
   case EHPersonality::MSVC_TableSEH:
   case EHPersonality::MSVC_CXX:
+  case EHPersonality::MSVC_CXX4:
   case EHPersonality::CoreCLR:
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
