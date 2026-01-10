@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WinException.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -19,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -229,12 +231,26 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
     const MCSymbol *PersHandlerSym =
         TLOF.getCFIPersonalitySymbol(PerFn, Asm->TM, MMI);
 
+    EHPersonality Per = EHPersonality::Unknown;
+    if (PerFn)
+      Per = classifyEHPersonality(PerFn);
+
     // Do not emit a .seh_handler directives for cleanup funclets.
     // FIXME: This means cleanup funclets cannot handle exceptions. Given that
     // Clang doesn't produce EH constructs inside cleanup funclets and LLVM's
     // inliner doesn't allow inlining them, this isn't a major problem in
     // practice.
-    if (!CurrentFuncletEntry->isCleanupFuncletEntry())
+    //
+    // For FH4 (MSVC_CXX4), catch funclets also don't have their own handler -
+    // they use the parent function's handler. Only the parent function and
+    // cleanup funclets need the handler directive for FH4.
+    bool EmitHandler = !CurrentFuncletEntry->isCleanupFuncletEntry();
+    if (Per == EHPersonality::MSVC_CXX4 && CurrentFuncletEntry->isEHFuncletEntry() &&
+        !CurrentFuncletEntry->isCleanupFuncletEntry()) {
+      // FH4 catch funclets don't emit a handler directive
+      EmitHandler = false;
+    }
+    if (EmitHandler)
       Asm->OutStreamer->emitWinEHHandler(PersHandlerSym, true, true);
   }
 }
@@ -267,6 +283,17 @@ void WinException::endFuncletImpl() {
 
       // If this is a C++ catch funclet (or the parent function),
       // emit a reference to the LSDA for the parent function.
+      StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
+      MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
+          Twine("$cppxdata$", FuncLinkageName));
+      Asm->OutStreamer->emitValue(create32bitRef(FuncInfoXData), 4);
+    } else if (Per == EHPersonality::MSVC_CXX4 && shouldEmitPersonality &&
+               !CurrentFuncletEntry->isCleanupFuncletEntry()) {
+      // FH4: Emit an UNWIND_INFO struct describing the prologue.
+      Asm->OutStreamer->emitWinEHHandlerData();
+
+      // For FH4, the parent function and catch funclets need a reference to
+      // the FuncInfo4 structure ($cppxdata$) following the unwind info.
       StringRef FuncLinkageName = GlobalValue::dropLLVMManglingEscape(F.getName());
       MCSymbol *FuncInfoXData = Asm->OutContext.getOrCreateSymbol(
           Twine("$cppxdata$", FuncLinkageName));
@@ -906,22 +933,49 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
 ///   < 2097152: 3 bytes
 ///   < 268435456: 4 bytes
 ///   otherwise: 5 bytes
+///
+/// The encoding packs low bits of the value into the first byte along with
+/// marker bits to indicate the total length. Higher bits go into subsequent
+/// bytes. This matches Microsoft's getNETencoded() in ehdata4_export.h.
+
+/// Calculate the size in bytes of a compressed integer encoding.
+static unsigned getCompressedIntSize(uint32_t Value) {
+  if (Value < 128)
+    return 1;
+  if (Value < 128 * 128)
+    return 2;
+  if (Value < 128 * 128 * 128)
+    return 3;
+  if (Value < 128 * 128 * 128 * 128)
+    return 4;
+  return 5;
+}
+
 static void emitCompressedInt(MCStreamer &OS, uint32_t Value) {
   if (Value < 128) {
+    // 1 byte: [value<<1 | 0] - marker is bit 0 = 0
     OS.emitInt8((Value << 1) | 0);
   } else if (Value < 128 * 128) {
-    OS.emitInt8((Value << 2) | 1);
+    // 2 bytes: [low6<<2 | 01] [high8]
+    // Marker is bits 1:0 = 01
+    OS.emitInt8(((Value << 2) & 0xFF) | 1);
     OS.emitInt8(Value >> 6);
   } else if (Value < 128 * 128 * 128) {
-    OS.emitInt8((Value << 3) | 3);
+    // 3 bytes: [low5<<3 | 011] [mid8] [high8]
+    // Marker is bits 2:0 = 011
+    OS.emitInt8(((Value << 3) & 0xFF) | 3);
     OS.emitInt8(Value >> 5);
     OS.emitInt8(Value >> 13);
   } else if (Value < 128 * 128 * 128 * 128) {
-    OS.emitInt8((Value << 4) | 7);
+    // 4 bytes: [low4<<4 | 0111] [byte1] [byte2] [byte3]
+    // Marker is bits 3:0 = 0111
+    OS.emitInt8(((Value << 4) & 0xFF) | 7);
     OS.emitInt8(Value >> 4);
     OS.emitInt8(Value >> 12);
     OS.emitInt8(Value >> 20);
   } else {
+    // 5 bytes: [1111] [byte0] [byte1] [byte2] [byte3]
+    // Marker is bits 3:0 = 1111
     OS.emitInt8(15);
     OS.emitInt8(Value);
     OS.emitInt8(Value >> 8);
@@ -940,10 +994,24 @@ void WinException::emitCXXFrameHandler4Table(const MachineFunction *MF) {
   MCSymbol *FuncInfoXData =
       Asm->OutContext.getOrCreateSymbol(Twine("$cppxdata$", FuncLinkageName));
 
-  // Compute IP to state table for non-cleanup funclets.
-  SmallVector<std::pair<const MCExpr *, int>, 4> IPToStateTable;
-  if (shouldEmitPersonality)
-    computeIP2StateTable(MF, FuncInfo, IPToStateTable);
+  // Find the WinEH::FrameInfo for this function.
+  // We need to populate it with IP2State labels for deferred emission.
+  // Match by Function symbol since that's reliably set in the frame info.
+  MCSymbol *FuncSym = Asm->getSymbol(&F);
+  WinEH::FrameInfo *Frame = nullptr;
+  for (const auto &FI : OS.getWinFrameInfos()) {
+    if (FI->Function == FuncSym) {
+      Frame = FI.get();
+      break;
+    }
+  }
+
+  // Populate IP2State labels for deferred emission.
+  // The actual byte offsets will be computed by MCWin64EH when symbol
+  // positions are known after layout.
+  if (Frame && shouldEmitPersonality) {
+    populateFH4IP2StateTable(MF, FuncInfo, *Frame);
+  }
 
   int UnwindHelpOffset = 0;
   if (Asm->MAI->usesWindowsCFI() &&
@@ -961,9 +1029,16 @@ void WinException::emitCXXFrameHandler4Table(const MachineFunction *MF) {
   if (!FuncInfo.TryBlockMap.empty())
     TryBlockMapXData =
         Asm->OutContext.getOrCreateSymbol(Twine("$tryMap$", FuncLinkageName));
-  if (!IPToStateTable.empty())
+  if (Frame && !Frame->FH4IP2StateTable.empty()) {
     IPToStateXData =
         Asm->OutContext.getOrCreateSymbol(Twine("$ip2state$", FuncLinkageName));
+  }
+
+  // Store the IP2State symbol in FrameInfo for MCWin64EH to use
+  if (Frame) {
+    Frame->FH4FuncInfoSym = FuncInfoXData;
+    Frame->FH4IP2StateSym = IPToStateXData;
+  }
 
   bool VerboseAsm = OS.isVerboseAsm();
   auto AddComment = [&](const Twine &Comment) {
@@ -1033,32 +1108,62 @@ void WinException::emitCXXFrameHandler4Table(const MachineFunction *MF) {
     // For now, we use RVA type (0b11) which is the simplest - like FH3.
     // Future optimization: detect simple dtors and use DtorWithObj type.
     
-    // We emit entries in order; nextOffset points backward to the previous
-    // entry. The first entry's nextOffset points before the buffer (to state -1).
-    // For simplicity in this initial implementation, we compute a fixed offset.
+    // The nextOffset field in each entry indicates the byte offset from the
+    // current entry to the previous entry. The runtime uses these offsets to
+    // navigate backward through the unwind map when unwinding to a target state.
+    //
+    // We need to pre-calculate entry sizes to compute correct offsets.
+    // Each RVA-type entry consists of:
+    //   - Compressed int: (nextOffset << 2) | type
+    //   - 4 bytes: action RVA
     
+    // Pre-calculate entry sizes to determine byte offsets
+    SmallVector<unsigned, 16> EntrySizes;
+    SmallVector<uint32_t, 16> EntryOffsets;
+    unsigned AccumulatedOffset = 0;
+    
+    for (size_t I = 0; I < FuncInfo.CxxUnwindMap.size(); ++I) {
+      // Each entry's nextOffset points to the byte offset of the previous entry
+      // For entry 0, nextOffset points before the buffer (to reach state -1)
+      // For entry I > 0, nextOffset is the accumulated size of entries 0..I-1
+      // plus the size of entry I's compressed int header (to skip past itself)
+      
+      uint32_t Type = 0b11; // RVA type
+      // For entry I, nextOffset = accumulated size of all previous entries
+      // plus the initial NumEntries compressed int
+      uint32_t NextOffset;
+      if (I == 0) {
+        // First entry: offset to "before" the unwind map (state -1)
+        // This is the size of the NumEntries field
+        NextOffset = getCompressedIntSize(FuncInfo.CxxUnwindMap.size());
+      } else {
+        // Subsequent entries: offset is accumulated size of previous entries
+        // plus the NumEntries field
+        NextOffset = AccumulatedOffset + 
+                     getCompressedIntSize(FuncInfo.CxxUnwindMap.size());
+      }
+      
+      uint32_t EncodedValue = (NextOffset << 2) | Type;
+      unsigned CompressedIntSize = getCompressedIntSize(EncodedValue);
+      unsigned EntrySize = CompressedIntSize + 4; // compressed int + 4-byte RVA
+      
+      EntrySizes.push_back(EntrySize);
+      EntryOffsets.push_back(NextOffset);
+      AccumulatedOffset += EntrySize;
+    }
+    
+    // Now emit the entries with correct offsets
     for (size_t I = 0; I < FuncInfo.CxxUnwindMap.size(); ++I) {
       const CxxUnwindMapEntry &UME = FuncInfo.CxxUnwindMap[I];
       MCSymbol *CleanupSym = getMCSymbolForMBB(
           Asm, dyn_cast_if_present<MachineBasicBlock *>(UME.Cleanup));
 
-      // Encode type as RVA (0b11) - always has an action RVA
-      // nextOffset encodes how many bytes back the previous entry is.
-      // For the entry going to state -1, nextOffset points before the buffer.
-      // We'll use a simplified encoding: each RVA-type entry is 5+ bytes
-      // (compressed nextOffset|type + 4 byte RVA), so we use entry index + 1
-      // as a proxy. The runtime walks backward using these offsets.
-      
-      // For state -1 (no cleanup), we still need to encode the transition.
-      // Calculate offset: for simplicity, use a fixed estimate.
-      // Entry I at state I goes to ToState; offset depends on entry size.
-      // This is complex - for initial implementation, we use a simple scheme.
-      
       uint32_t Type = 0b11; // RVA type
-      uint32_t NextOffset = 5 * (I + 1); // Approximate: each entry ~5 bytes
+      uint32_t NextOffset = EntryOffsets[I];
       uint32_t EncodedValue = (NextOffset << 2) | Type;
       
-      AddComment(Twine("UnwindEntry ") + Twine(I) + " (type=RVA)");
+      AddComment(Twine("UnwindEntry ") + Twine(I) + " (type=RVA, offset=" +
+                 Twine(NextOffset) + ")");
       emitCompressedInt(OS, EncodedValue);
       
       AddComment("Action");
@@ -1171,60 +1276,10 @@ void WinException::emitCXXFrameHandler4Table(const MachineFunction *MF) {
     }
   }
 
-  // Emit IPtoStateMap4 if present
-  // IPtoStateMap4 format:
-  //   NumEntries: compressed int
-  //   IPtoStateMapEntry4[NumEntries]:
-  //     Ip: compressed int (function-relative, delta-encoded from previous)
-  //     State: compressed int (stored as state + 1 to avoid negatives)
-  if (IPToStateXData) {
-    OS.emitLabel(IPToStateXData);
-    AddComment("NumIPToStateEntries");
-    emitCompressedInt(OS, IPToStateTable.size());
-
-    // Delta encoding: each IP is relative to the previous IP.
-    // First IP is relative to function start (delta from 0).
-    MCSymbol *FuncStart = Asm->getFunctionBegin();
-    const MCSymbol *PrevSym = FuncStart;
-
-    for (auto &IPStatePair : IPToStateTable) {
-      // IPStatePair.first is an MCExpr (usually MCSymbolRefExpr with @IMGREL)
-      // We need to extract the underlying symbol for delta encoding.
-      const MCExpr *IPExpr = IPStatePair.first;
-      const MCSymbol *CurSym = nullptr;
-      
-      // Extract the symbol from the expression
-      if (const auto *SymRef = dyn_cast<MCSymbolRefExpr>(IPExpr)) {
-        CurSym = &SymRef->getSymbol();
-      } else {
-        // Fallback: emit as 4-byte value if we can't extract symbol
-        AddComment("IP (non-delta)");
-        OS.emitValue(IPExpr, 4);
-        int EncodedState = IPStatePair.second + 1;
-        AddComment(Twine("State ") + Twine(IPStatePair.second));
-        emitCompressedInt(OS, EncodedState);
-        continue;
-      }
-      
-      // Create delta expression: CurSym - PrevSym (plain symbols, no @IMGREL)
-      const MCExpr *DeltaExpr = MCBinaryExpr::createSub(
-          MCSymbolRefExpr::create(CurSym, Asm->OutContext),
-          MCSymbolRefExpr::create(PrevSym, Asm->OutContext),
-          Asm->OutContext);
-
-      AddComment("IP delta");
-      // Emit as 1-byte value - assembler will compute the delta
-      OS.emitValue(DeltaExpr, 1);
-      
-      // State is encoded as state + 1, then .NET compressed
-      int EncodedState = IPStatePair.second + 1;
-      AddComment(Twine("State ") + Twine(IPStatePair.second));
-      emitCompressedInt(OS, EncodedState);
-
-      // Update previous symbol for next delta calculation
-      PrevSym = CurSym;
-    }
-  }
+  // IP2State table for FH4 is emitted by MCWin64EH after layout is complete,
+  // so we can compute actual byte offsets. We only emit the label here.
+  // The actual data emission happens in Win64EH::UnwindEmitter::Emit().
+  // (See MCWin64EH.cpp for EmitFH4IP2StateTable)
 }
 
 void WinException::computeIP2StateTable(
@@ -1279,6 +1334,56 @@ void WinException::computeIP2StateTable(
           std::make_pair(LabelExpression, StateChange.NewState));
       // FIXME: assert that NewState is between CatchLow and CatchHigh.
     }
+  }
+}
+
+/// Populate FH4 IP2State table with labels and states.
+/// The actual byte offsets will be computed by MCWin64EH when symbol
+/// positions are known after layout.
+///
+/// This approach defers offset computation to the MC layer where we have
+/// access to the assembler and can compute symbol differences accurately.
+void WinException::populateFH4IP2StateTable(const MachineFunction *MF,
+                                            const WinEHFuncInfo &FuncInfo,
+                                            WinEH::FrameInfo &Frame) {
+  // For FH4, we only emit IP2State entries for the main function body.
+  // Unlike FH3 which uses symbol expressions (resolved by linker), FH4 uses
+  // delta-encoded integer offsets. These must be monotonically increasing
+  // from function start, so we can't mix entries from different funclets
+  // which are in different sections.
+  //
+  // Find the extent of the main function body (before any funclet entries).
+  MachineFunction::const_iterator FuncletStart = MF->begin();
+  MachineFunction::const_iterator FuncletEnd = MF->begin();
+  MachineFunction::const_iterator End = MF->end();
+
+  while (++FuncletEnd != End) {
+    if (FuncletEnd->isEHFuncletEntry())
+      break;
+  }
+
+  // NOTE: Unlike FH3, FH4 does NOT need an explicit entry for function start.
+  // The FH4 runtime's StateFromIp() initializes prevState = EH_EMPTY_STATE (-1)
+  // before iterating, so state -1 is implicit for IPs before the first entry.
+  // We only emit entries for actual state transitions.
+
+  // Iterate through state changes in the main function body
+  for (const auto &StateChange : InvokeStateChangeIterator::range(
+           FuncInfo, FuncletStart, FuncletEnd, NullState)) {
+    // Skip transitions back to NullState (-1) - these are implicit in FH4.
+    // The runtime handles the "return to -1" case without needing an entry.
+    // We only need entries that transition INTO a non-null state.
+    if (StateChange.NewState == NullState)
+      continue;
+
+    // Use the EH start label for the invoke if we have one, otherwise use
+    // the previous end label.
+    const MCSymbol *ChangeLabel = StateChange.NewStartLabel;
+    if (!ChangeLabel)
+      ChangeLabel = StateChange.PreviousEndLabel;
+
+    // Store the label and state for later offset computation
+    Frame.FH4IP2StateTable.emplace_back(ChangeLabel, StateChange.NewState);
   }
 }
 

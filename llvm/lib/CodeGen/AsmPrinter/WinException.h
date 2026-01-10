@@ -14,6 +14,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_WIN64EXCEPTION_H
 
 #include "EHStreamer.h"
+#include "llvm/MC/MCWinEH.h"
 #include <vector>
 
 namespace llvm {
@@ -75,6 +76,13 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   void computeIP2StateTable(
       const MachineFunction *MF, const WinEHFuncInfo &FuncInfo,
       SmallVectorImpl<std::pair<const MCExpr *, int>> &IPToStateTable);
+
+  /// Populate FH4 IP2State table with labels and states.
+  /// The actual byte offsets will be computed by MCWin64EH when symbol
+  /// positions are known after layout.
+  void populateFH4IP2StateTable(const MachineFunction *MF,
+                                const WinEHFuncInfo &FuncInfo,
+                                WinEH::FrameInfo &Frame);
 
   /// Emits the label used with llvm.eh.recoverfp, which is used by
   /// outlined funclets.
