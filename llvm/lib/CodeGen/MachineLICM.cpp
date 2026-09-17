@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegister.h"
@@ -635,12 +636,15 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
       const MachineFunction &MF = *BB->getParent();
       const Constant *PersonalityFn = MF.getFunction().getPersonalityFn();
       const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-      if (MCRegister Reg = TLI.getExceptionPointerRegister(
-              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
+      // Prefer the "exception-model" module flag, else the TargetOptions
+      // default.
+      ExceptionHandling EH = MF.getFunction().getParent()->getExceptionModel();
+      if (EH == ExceptionHandling::Default)
+        EH = TLI.getTargetMachine().getExceptionModel();
+      if (MCRegister Reg = TLI.getExceptionPointerRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
-      if (MCRegister Reg = TLI.getExceptionSelectorRegister(
-              TLI.getTargetMachine().getExceptionModel(), PersonalityFn))
+      if (MCRegister Reg = TLI.getExceptionSelectorRegister(EH, PersonalityFn))
         for (MCRegUnit Unit : TRI->regunits(Reg))
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
@@ -743,9 +747,13 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
                     << " from " << printMBBReference(*MI->getParent()) << ": "
                     << *MI);
 
-  // Splice the instruction to the preheader.
+  // A valid insertion point cannot make a cross-region hoist safe: first keep
+  // the same protecting handler, then insert before the preheader's end
+  // markers.
   MachineBasicBlock *MBB = MI->getParent();
-  Preheader->splice(Preheader->getFirstTerminator(), MBB, MI);
+  if (!MBB->hasSameSEHRegion(*Preheader))
+    return;
+  Preheader->splice(Preheader->getInsertPtBeforeTerminators(), MBB, MI);
 
   // Since we are moving the instruction out of its basic block, we do not
   // retain its debug location. Doing so would degrade the debugging
@@ -1611,6 +1619,10 @@ bool MachineLICMImpl::MayCSE(MachineInstr *MI) {
 unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
                                 MachineLoop *CurLoop) {
   MachineBasicBlock *SrcBlock = MI->getParent();
+  // Check before either hoisting or CSE can replace the instruction with a
+  // computation outside its protected region.
+  if (!SrcBlock->hasSameSEHRegion(*Preheader))
+    return 0;
 
   // Disable the instruction hoisting due to block hotness
   if ((DisableHoistingToHotterBlocks == UseBFI::All ||
@@ -1672,7 +1684,8 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   if (!HasCSEDone) {
     // Otherwise, splice the instruction to the preheader.
-    Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
+    Preheader->splice(Preheader->getInsertPtBeforeTerminators(),
+                      MI->getParent(), MI);
 
     // Since we are moving the instruction out of its basic block, we do not
     // retain its debug location. Doing so would degrade the debugging
